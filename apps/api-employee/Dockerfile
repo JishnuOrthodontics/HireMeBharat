@@ -19,7 +19,7 @@ COPY ${SERVICE_PATH}/package*.json ./${SERVICE_PATH}/
 COPY ${SERVICE_PATH}/tsconfig.json ./${SERVICE_PATH}/
 
 # Install dependencies using workspaces
-RUN npm install --workspace=@hiremebharat/${SERVICE_NAME} --omit=dev
+RUN npm install --workspace=@hiremebharat/${SERVICE_NAME}
 
 # Copy service source
 COPY ${SERVICE_PATH}/src ./${SERVICE_PATH}/src
