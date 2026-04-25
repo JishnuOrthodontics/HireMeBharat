@@ -5,7 +5,7 @@
   "description": "HireMeBharat — Premium Concierge Recruitment Platform",
   "workspaces": [
     "packages/*",
-    "apps/web/*",
+    "apps/web",
     "apps/api-gateway",
     "apps/api-auth",
     "apps/api-employee",
