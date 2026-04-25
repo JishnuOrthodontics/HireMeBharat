@@ -31,19 +31,16 @@ async function buildApp() {
 
   // --- HTTP Proxy to microservices ---
   // Public routes (no auth required) -> api-auth
-  await app.register(httpProxy, {
+  await app.register(httpProxy as any, {
     upstream: 'http://localhost:3002',
     prefix: '/api/public',
     // Decode the response
-    decodeResponse: false,
   });
 
   // Protected routes with RBAC -> appropriate microservice
-  await app.register(httpProxy, {
+  await app.register(httpProxy as any, {
     upstream: 'http://localhost:3003',
     prefix: '/api/employee',
-    // Decode the response
-    decodeResponse: false,
     // Pre-validation hook - check authentication and role
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
@@ -51,20 +48,18 @@ async function buildApp() {
     }
   });
 
-  await app.register(httpProxy, {
+  await app.register(httpProxy as any, {
     upstream: 'http://localhost:3004',
     prefix: '/api/employer',
-    decodeResponse: false,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('EMPLOYER')(request, reply);
     }
   });
 
-  await app.register(httpProxy, {
+  await app.register(httpProxy as any, {
     upstream: 'http://localhost:3005',
     prefix: '/api/admin',
-    decodeResponse: false,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('ADMIN')(request, reply);
@@ -72,10 +67,9 @@ async function buildApp() {
   });
 
   // Shared routes (require auth but no specific role) -> can go to any, let's use api-auth
-  await app.register(httpProxy, {
+  await app.register(httpProxy as any, {
     upstream: 'http://localhost:3002',
     prefix: '/api',
-    decodeResponse: false,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
     }
