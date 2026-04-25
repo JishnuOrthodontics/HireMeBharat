@@ -1,4 +1,4 @@
-import Fastify from 'fastify';
+import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from 'dotenv';
 import httpProxy from '@fastify/http-proxy';
@@ -45,14 +45,9 @@ async function buildApp() {
     // Decode the response
     decodeResponse: false,
     // Pre-validation hook - check authentication and role
-    preValidation: (request, reply, done) => {
-      app.authenticate(request, reply, (err) => {
-        if (err) {
-          reply.send(err);
-        } else {
-          app.requireRole('EMPLOYEE')(request, reply, done);
-        }
-      });
+    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+      await app.authenticate(request, reply);
+      await app.requireRole('EMPLOYEE')(request, reply);
     }
   });
 
@@ -60,14 +55,9 @@ async function buildApp() {
     upstream: 'http://localhost:3004',
     prefix: '/api/employer',
     decodeResponse: false,
-    preValidation: (request, reply, done) => {
-      app.authenticate(request, reply, (err) => {
-        if (err) {
-          reply.send(err);
-        } else {
-          app.requireRole('EMPLOYER')(request, reply, done);
-        }
-      });
+    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+      await app.authenticate(request, reply);
+      await app.requireRole('EMPLOYER')(request, reply);
     }
   });
 
@@ -75,14 +65,9 @@ async function buildApp() {
     upstream: 'http://localhost:3005',
     prefix: '/api/admin',
     decodeResponse: false,
-    preValidation: (request, reply, done) => {
-      app.authenticate(request, reply, (err) => {
-        if (err) {
-          reply.send(err);
-        } else {
-          app.requireRole('ADMIN')(request, reply, done);
-        }
-      });
+    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+      await app.authenticate(request, reply);
+      await app.requireRole('ADMIN')(request, reply);
     }
   });
 
@@ -91,8 +76,8 @@ async function buildApp() {
     upstream: 'http://localhost:3002',
     prefix: '/api',
     decodeResponse: false,
-    preValidation: (request, reply, done) => {
-      app.authenticate(request, reply, done);
+    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+      await app.authenticate(request, reply);
     }
   });
 

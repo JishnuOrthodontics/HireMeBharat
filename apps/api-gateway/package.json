@@ -15,7 +15,7 @@
     "@hiremebharat/shared": "*",
     "dotenv": "^16.5.0",
     "fastify": "^5.3.3",
-    "fastify-http-proxy": "^6.0.2",
+    "@fastify/http-proxy": "^11.0.1",
     "firebase-admin": "^13.4.0",
     "mongodb": "^6.16.0",
     "zod": "^3.25.3"
