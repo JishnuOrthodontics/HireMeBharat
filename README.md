@@ -89,5 +89,5 @@ The backend Fastify instance intercepts requests to protected routes in `src/plu
 
 ## 🚀 Deployment Targets
 
-- **Frontend:** Designed for scalable frontend hosting platforms like **Cloudflare Pages**, Vercel, or Firebase Hosting.
-- **Backend:** Designed to be containerized and deployed via **Google Cloud Run (GCP)** or similar serverless providers.
+- **Frontend (Live):** Successfully hosted and automatically deployed via **Cloudflare Pages** (`hiremebharat.com`). Any changes pushed to the `main` branch will automatically build the Vite project via Cloudflare Git Integrations.
+- **Backend (Pending):** Designed to be containerized and deployed via **Google Cloud Run (GCP)** or similar serverless providers.
