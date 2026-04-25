@@ -94,7 +94,7 @@ export async function publicRoutes(app: FastifyInstance) {
         },
       });
     } catch (err) {
-      app.log.error('Registration error:', err);
+      app.log.error({ err }, 'Registration error');
       return reply.code(500).send({ error: 'Internal Server Error' });
     }
   });
@@ -127,7 +127,7 @@ export async function publicRoutes(app: FastifyInstance) {
       // No MongoDB — return basic token data
       return reply.code(404).send({ error: 'Not Found', message: 'User profile not found' });
     } catch (err) {
-      app.log.error('Fetch profile error:', err);
+      app.log.error({ err }, 'Fetch profile error');
       return reply.code(500).send({ error: 'Internal Server Error' });
     }
   });

@@ -28,7 +28,7 @@ export async function registerMongoPlugin(app: FastifyInstance) {
       app.log.info('MongoDB connection closed');
     });
   } catch (err) {
-    app.log.error('Failed to connect to MongoDB:', err);
+    app.log.error({ err }, 'Failed to connect to MongoDB');
     // Don't crash — allow server to start for development without DB
     const db = null as unknown as Db;
     app.decorate('mongo', { client, db });
