@@ -4,21 +4,32 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Accept build arguments
+ARG SERVICE_NAME
+ARG SERVICE_PATH
+
+# Copy root package files
 COPY package*.json ./
-COPY tsconfig.json ./
 
-# Install dependencies
-RUN npm install --omit=dev
+# Copy local dependencies
+COPY packages/ ./packages/
 
-# Copy source code
-COPY src ./src
+# Copy service files
+COPY ${SERVICE_PATH}/package*.json ./${SERVICE_PATH}/
+COPY ${SERVICE_PATH}/tsconfig.json ./${SERVICE_PATH}/
 
-# Build TypeScript
+# Install dependencies using workspaces
+RUN npm install --workspace=@hiremebharat/${SERVICE_NAME} --omit=dev
+
+# Copy service source
+COPY ${SERVICE_PATH}/src ./${SERVICE_PATH}/src
+
+# Build the service
+WORKDIR /app/${SERVICE_PATH}
 RUN npm run build
 
-# Expose port
+# Port
 EXPOSE 3001
 
-# Start the application
+# Run
 CMD ["npm", "start"]
