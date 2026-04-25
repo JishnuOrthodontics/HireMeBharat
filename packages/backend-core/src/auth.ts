@@ -2,19 +2,7 @@ import { FastifyInstance, FastifyRequest } from 'fastify';
 import admin from 'firebase-admin';
 
 // Extended request type with user info
-declare module 'fastify' {
-  interface FastifyRequest {
-    user?: {
-      uid: string;
-      email: string;
-      role: string;
-      displayName?: string;
-    };
-  }
-  interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: any) => Promise<void>;
-  }
-}
+import './types.js';
 
 let firebaseInitialized = false;
 

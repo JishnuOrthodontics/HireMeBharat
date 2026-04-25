@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import '@hiremebharat/backend-core';
 
 export async function adminRoutes(app: FastifyInstance) {
   // Apply auth + RBAC to all routes in this group

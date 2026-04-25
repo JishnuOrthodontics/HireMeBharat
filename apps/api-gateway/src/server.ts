@@ -26,8 +26,8 @@ async function buildApp() {
     credentials: true,
   });
 
-  await registerAuthPlugin(app);
-  await registerRbacPlugin(app);
+  await app.register(registerAuthPlugin);
+  await app.register(registerRbacPlugin);
 
   // --- HTTP Proxy to microservices ---
   // Public routes (no auth required) -> api-auth

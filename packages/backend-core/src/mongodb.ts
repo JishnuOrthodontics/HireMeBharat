@@ -1,14 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { MongoClient, Db } from 'mongodb';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    mongo: {
-      client: MongoClient;
-      db: Db;
-    };
-  }
-}
+import { registerAuthPlugin } from './auth.js';
+import { registerRbacPlugin } from './rbac.js';
+import './types.js';
 
 export async function registerMongoPlugin(app: FastifyInstance) {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';

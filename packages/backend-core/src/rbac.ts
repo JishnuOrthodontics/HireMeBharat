@@ -1,11 +1,7 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { UserRole } from '@hiremebharat/shared';
 
-declare module 'fastify' {
-  interface FastifyInstance {
-    requireRole: (...roles: string[]) => (request: FastifyRequest, reply: any) => Promise<void>;
-  }
-}
+import './types.js';
 
 export async function registerRbacPlugin(app: FastifyInstance) {
   const requireRole = (...roles: string[]) => {

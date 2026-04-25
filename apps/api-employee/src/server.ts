@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { config } from 'dotenv';
-import { registerMongoPlugin } from '@hiremebharat/backend-core';
+import { registerMongoPlugin, registerAuthPlugin, registerRbacPlugin } from '@hiremebharat/backend-core';
 import { employeeRoutes } from './routes/employee/index.js';
 
 config();
@@ -26,6 +26,8 @@ async function buildApp() {
   });
 
   await registerMongoPlugin(app);
+  await app.register(registerAuthPlugin);
+  await app.register(registerRbacPlugin);
 
   // --- Routes ---
   // Employee routes (require auth + EMPLOYEE role)

@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import '@hiremebharat/backend-core';
 
 export async function employeeRoutes(app: FastifyInstance) {
   app.addHook('preHandler', app.authenticate);
