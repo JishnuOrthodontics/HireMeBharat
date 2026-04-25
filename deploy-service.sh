@@ -19,4 +19,7 @@ sed -i "s|image: .*hiremebharat-${SERVICE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NA
 # Restart only the specific service
 docker compose -f docker-compose.prod.yml up -d $SERVICE_NAME
 
+# Cleanup old images to save space
+docker image prune -f
+
 echo "Deployment of $SERVICE_NAME completed"
