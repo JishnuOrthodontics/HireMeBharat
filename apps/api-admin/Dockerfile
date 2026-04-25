@@ -21,6 +21,9 @@ COPY ${SERVICE_PATH}/tsconfig.json ./${SERVICE_PATH}/
 # Install dependencies using workspaces
 RUN npm install --workspace=@hiremebharat/${SERVICE_NAME}
 
+# Build local dependencies
+RUN npm run build --workspace=@hiremebharat/backend-core
+
 # Copy service source
 COPY ${SERVICE_PATH}/src ./${SERVICE_PATH}/src
 
