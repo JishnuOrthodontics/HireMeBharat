@@ -31,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Build frontend
-        run: npm run build --workspace=apps/web
+        run: npm run build --workspace=@hiremebharat/web
         env:
           # Include public variables needed at build time
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
