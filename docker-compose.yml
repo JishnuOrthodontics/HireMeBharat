@@ -1,0 +1,107 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./apps/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+    depends_on:
+      - api-auth
+      - api-employee
+      - api-employer
+      - api-admin
+
+  # Auth Service (handles public routes)
+  api-auth:
+    build:
+      context: ./apps/api-auth
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+
+  # Employee Service
+  api-employee:
+    build:
+      context: ./apps/api-employee
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+
+  # Employer Service
+  api-employer:
+    build:
+      context: ./apps/api-employer
+      dockerfile: Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+
+  # Admin Service
+  api-admin:
+    build:
+      context: ./apps/api-admin
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+
+  # Local Docker Registry (for GCP deployment)
+  registry:
+    image: registry:2
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./registry-data:/var/lib/registry
+    environment:
+      - REGISTRY_AUTH=htpasswd
+      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+    command:
+      - /bin/sh -c
+      - |
+        htpasswd -Bbn $REGISTRY_USER $REGISTRY_PASSWORD > /auth/htpasswd &&
+        exec /etc/docker/registry/config.yml
+
+volumes:
+  registry-data:

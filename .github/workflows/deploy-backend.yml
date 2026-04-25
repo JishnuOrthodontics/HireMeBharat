@@ -1,0 +1,89 @@
+name: Build and Deploy Backend
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'apps/api-gateway/**'
+      - 'apps/api-auth/**'
+      - 'apps/api-employee/**'
+      - 'apps/api-employer/**'
+      - 'apps/api-admin/**'
+      - 'packages/backend-core/**'
+      - '.github/workflows/deploy-backend.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, api-auth, api-employee, api-employer, api-admin]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract service name
+        id: service-name
+        run: echo "service=${{ matrix.service }}" >> $GITHUB_OUTPUT
+
+      - name: Check if service changed
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            service-changed:
+              - 'apps/${{ matrix.service }}/**'
+              - 'packages/backend-core/**'
+
+      - name: Build and push Docker image
+        if: steps.changes.outputs.service-changed == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/${{ matrix.service }}
+          push: true
+          tags: ${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${{ matrix.service }}:cache
+          cache-to: type=registry,ref=${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${{ matrix.service }}:cache,mode=max
+
+      - name: Prepare configuration files
+        run: |
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.prod
+          echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.prod
+          echo "FIREBASE_PRIVATE_KEY=\"${{ secrets.FIREBASE_PRIVATE_KEY }}\"" >> .env.prod
+          echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env.prod
+          echo "NODE_ENV=production" >> .env.prod
+
+      - name: Copy config to GCP VM
+        if: steps.changes.outputs.service-changed == 'true'
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          source: "docker-compose.prod.yml,.env.prod,deploy-service.sh"
+          target: "/opt/hiremebharat/"
+
+      - name: Execute deployment on GCP VM
+        if: steps.changes.outputs.service-changed == 'true'
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          script: |
+            cd /opt/hiremebharat
+            mv .env.prod .env
+            chmod +x deploy-service.sh
+            ./deploy-service.sh ${{ matrix.service }} ${{ github.sha }}

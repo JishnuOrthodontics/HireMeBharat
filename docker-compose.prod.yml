@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    image: localhost:5000/hiremebharat-api-gateway:latest
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - FRONTEND_URL=https://hiremebharat.com
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+    restart: unless-stopped
+
+  # Auth Service (handles public routes)
+  api-auth:
+    image: localhost:5000/hiremebharat-api-auth:latest
+    environment:
+      - PORT=3002
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - FRONTEND_URL=https://hiremebharat.com
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+    restart: unless-stopped
+
+  # Employee Service
+  api-employee:
+    image: localhost:5000/hiremebharat-api-employee:latest
+    environment:
+      - PORT=3003
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - FRONTEND_URL=https://hiremebharat.com
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+    restart: unless-stopped
+
+  # Employer Service
+  api-employer:
+    image: localhost:5000/hiremebharat-api-employer:latest
+    environment:
+      - PORT=3004
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - FRONTEND_URL=https://hiremebharat.com
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+    restart: unless-stopped
+
+  # Admin Service
+  api-admin:
+    image: localhost:5000/hiremebharat-api-admin:latest
+    environment:
+      - PORT=3005
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - FRONTEND_URL=https://hiremebharat.com
+      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+    restart: unless-stopped
+
+  # Local Docker Registry (for GCP deployment)
+  registry:
+    image: registry:2
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./registry-data:/var/lib/registry
+    environment:
+      - REGISTRY_AUTH=htpasswd
+      - REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
+      - REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm
+    command:
+      - /bin/sh -c
+      - |
+        htpasswd -Bbn $REGISTRY_USER $REGISTRY_PASSWORD > /auth/htpasswd &&
+        exec /etc/docker/registry/config.yml
+    restart: unless-stopped

@@ -5,12 +5,21 @@
   "description": "HireMeBharat — Premium Concierge Recruitment Platform",
   "workspaces": [
     "packages/*",
-    "apps/*"
+    "apps/web/*",
+    "apps/api-gateway",
+    "apps/api-auth",
+    "apps/api-employee",
+    "apps/api-employer",
+    "apps/api-admin"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
-    "dev:api": "npm run dev --workspace=apps/api",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:api\"",
+    "dev:gateway": "npm run dev --workspace=apps/api-gateway",
+    "dev:auth": "npm run dev --workspace=apps/api-auth",
+    "dev:employee": "npm run dev --workspace=apps/api-employee",
+    "dev:employer": "npm run dev --workspace=apps/api-employer",
+    "dev:admin": "npm run dev --workspace=apps/api-admin",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:employee\" \"npm run dev:employer\" \"npm run dev:admin\"",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
