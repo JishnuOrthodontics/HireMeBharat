@@ -13,7 +13,9 @@ services:
       - FRONTEND_URL=https://hiremebharat.com
       - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Auth Service (handles public routes)
@@ -26,7 +28,9 @@ services:
       - FRONTEND_URL=https://hiremebharat.com
       - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Employee Service
@@ -39,7 +43,9 @@ services:
       - FRONTEND_URL=https://hiremebharat.com
       - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Employer Service
@@ -52,7 +58,9 @@ services:
       - FRONTEND_URL=https://hiremebharat.com
       - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Admin Service
@@ -65,7 +73,9 @@ services:
       - FRONTEND_URL=https://hiremebharat.com
       - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Local Docker Registry (for GCP deployment)
@@ -85,3 +95,11 @@ services:
         htpasswd -Bbn $REGISTRY_USER $REGISTRY_PASSWORD > /auth/htpasswd &&
         exec /etc/docker/registry/config.yml
     restart: unless-stopped
+
+  # Cloudflare Tunnel
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
