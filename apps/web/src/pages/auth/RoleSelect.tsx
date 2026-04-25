@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, type UserRole } from '../../contexts/AuthContext';
 import './Auth.css';
 
@@ -9,8 +9,6 @@ import './Auth.css';
 export default function RoleSelect() {
   const { firebaseUser, completeGoogleRegistration, needsRoleSelection } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const preselectedRole = (location.state as any)?.preselectedRole as UserRole | undefined;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
