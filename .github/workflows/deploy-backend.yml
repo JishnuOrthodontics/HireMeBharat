@@ -11,11 +11,42 @@ on:
       - 'apps/api-admin/**'
       - 'packages/backend-core/**'
       - '.github/workflows/deploy-backend.yml'
+      - 'deploy-full-stack.sh'
   workflow_dispatch:
 
 jobs:
+  # Matrix jobs only deploy when files under each app/ (or backend-core) change.
+  # Commits that only touch CI / deploy-full-stack.sh must run full-stack-deploy instead.
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      run_full_stack: ${{ steps.set.outputs.run }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Detect workflow or full-stack script changes
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        id: infra
+        with:
+          filters: |
+            match:
+              - '.github/workflows/deploy-backend.yml'
+              - 'deploy-full-stack.sh'
+      - name: Set run_full_stack
+        id: set
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ steps.infra.outputs.match }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-and-deploy:
-    if: github.event_name == 'push'
+    needs: meta
+    if: github.event_name == 'push' && needs.meta.outputs.run_full_stack != 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -111,7 +142,8 @@ jobs:
             ./deploy-service.sh ${{ matrix.service }} ${{ github.sha }}
 
   full-stack-deploy:
-    if: github.event_name == 'workflow_dispatch'
+    needs: meta
+    if: needs.meta.outputs.run_full_stack == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
