@@ -11,9 +11,11 @@ on:
       - 'apps/api-admin/**'
       - 'packages/backend-core/**'
       - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -107,3 +109,110 @@ jobs:
             mv .env.prod .env
             chmod +x deploy-service.sh
             ./deploy-service.sh ${{ matrix.service }} ${{ github.sha }}
+
+  full-stack-deploy:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          config-inline: |
+            [registry."${{ secrets.GCP_VM_IP }}:5000"]
+              http = true
+
+      - name: Cleanup GCP VM storage
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          script: |
+            docker system prune -f
+
+      - name: Prepare configuration files
+        run: |
+          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.prod
+          echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.prod
+          echo "FIREBASE_PRIVATE_KEY=\"${{ secrets.FIREBASE_PRIVATE_KEY }}\"" >> .env.prod
+          echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env.prod
+          echo "CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}" >> .env.prod
+          echo "NODE_ENV=production" >> .env.prod
+          if [ -z "${{ secrets.REGISTRY_USER }}" ]; then echo "REGISTRY_USER=hiremeregistry" >> .env.prod; else echo "REGISTRY_USER=${{ secrets.REGISTRY_USER }}" >> .env.prod; fi
+          if [ -z "${{ secrets.REGISTRY_PASSWORD }}" ]; then echo "REGISTRY_PASSWORD=hiremeregistry" >> .env.prod; else echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}" >> .env.prod; fi
+
+      - name: Docker login to VM registry
+        continue-on-error: true
+        run: |
+          RU=$(grep '^REGISTRY_USER=' .env.prod | cut -d= -f2-)
+          RP=$(grep '^REGISTRY_PASSWORD=' .env.prod | cut -d= -f2-)
+          echo "${RP}" | docker login "${{ secrets.GCP_VM_IP }}:5000" -u "${RU}" --password-stdin
+
+      - name: Build and push all services
+        run: |
+          set -e
+          for svc in api-gateway api-auth api-employee api-employer api-admin; do
+            docker buildx build \
+              --push \
+              --file "apps/${svc}/Dockerfile" \
+              --build-arg "SERVICE_NAME=${svc}" \
+              --build-arg "SERVICE_PATH=apps/${svc}" \
+              --tag "${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${svc}:${{ github.sha }}" \
+              --cache-from "type=registry,ref=${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${svc}:cache" \
+              --cache-to "type=registry,ref=${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${svc}:cache,mode=max" \
+              .
+          done
+
+      - name: Copy config to GCP VM
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          source: "docker-compose.prod.yml,.env.prod,deploy-full-stack.sh"
+          target: "/opt/hiremebharat/"
+
+      - name: Execute full-stack deployment
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          script: |
+            cd /opt/hiremebharat
+            mv -f .env.prod .env
+            chmod +x deploy-full-stack.sh
+            ./deploy-full-stack.sh ${{ github.sha }}
+
+      - name: Verify API health on VM
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          script: |
+            set -e
+            for i in $(seq 1 45); do
+              if curl -sfS --max-time 5 http://127.0.0.1:3001/api/health > /tmp/h.json; then
+                echo "Health OK:"
+                cat /tmp/h.json
+                exit 0
+              fi
+              echo "waiting for gateway ($i)..."
+              sleep 2
+            done
+            echo "Health check failed"
+            docker compose -f /opt/hiremebharat/docker-compose.prod.yml ps || true
+            exit 1
