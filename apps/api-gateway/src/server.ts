@@ -22,7 +22,7 @@ async function buildApp() {
 
   // --- Plugins ---
   await app.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL || 'https://hiremebharat.com',
     credentials: true,
   });
 
@@ -90,7 +90,7 @@ async function start() {
     const app = await buildApp();
 
     await app.listen({ port: PORT, host: HOST });
-    console.log(`🚀 HireMeBharat API Gateway running at http://${HOST}:${PORT}`);
+    console.log(`?? HireMeBharat API Gateway running at http://${HOST}:${PORT}`);
 
     // Graceful shutdown
     const shutdown = async () => {
