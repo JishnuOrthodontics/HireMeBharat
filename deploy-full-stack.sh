@@ -43,3 +43,5 @@ fi
 docker image prune -f
 
 echo "Full stack deployed with tag ${TAG}."
+
+
