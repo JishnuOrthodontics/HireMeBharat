@@ -6,3 +6,4 @@ dist/
 *.log
 .DS_Store
 .vite/
+.ci_deploy_key

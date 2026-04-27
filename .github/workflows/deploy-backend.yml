@@ -84,14 +84,36 @@ jobs:
               - 'apps/${{ matrix.service }}/**'
               - 'packages/backend-core/**'
 
+      - name: Prepare SSH deploy key (decrypt for appleboy)
+        if: steps.changes.outputs.service-changed == 'true'
+        env:
+          SSH_KEY: ${{ secrets.GCP_VM_SSH_KEY }}
+          SSH_PASS: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+        run: |
+          set -eo pipefail
+          KEYFILE="${GITHUB_WORKSPACE}/.ci_deploy_key"
+          umask 077
+          printf '%s\n' "${SSH_KEY}" > "${KEYFILE}"
+          if ssh-keygen -y -f "${KEYFILE}" -P '' >/dev/null 2>&1; then
+            echo "SSH deploy key has no passphrase"
+          else
+            if [ -z "${SSH_PASS}" ]; then
+              echo "::error::GCP_VM_SSH_KEY is passphrase-protected. Add repository secret GCP_VM_SSH_KEY_PASSPHRASE, or replace GCP_VM_SSH_KEY with an unencrypted deploy key."
+              exit 1
+            fi
+            if ! ssh-keygen -p -f "${KEYFILE}" -P "${SSH_PASS}" -N ''; then
+              echo "::error::Could not unlock GCP_VM_SSH_KEY (wrong GCP_VM_SSH_KEY_PASSPHRASE?)"
+              exit 1
+            fi
+          fi
+
       - name: Cleanup GCP VM storage
         if: steps.changes.outputs.service-changed == 'true'
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           script: |
             docker system prune -f
             docker image prune -f
@@ -125,8 +147,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           source: "docker-compose.prod.yml,.env.prod,deploy-service.sh"
           target: "/opt/hiremebharat/"
 
@@ -136,8 +157,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           script: |
             cd /opt/hiremebharat
             mv .env.prod .env
@@ -151,6 +171,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Prepare SSH deploy key (decrypt for appleboy)
+        env:
+          SSH_KEY: ${{ secrets.GCP_VM_SSH_KEY }}
+          SSH_PASS: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+        run: |
+          set -eo pipefail
+          KEYFILE="${GITHUB_WORKSPACE}/.ci_deploy_key"
+          umask 077
+          printf '%s\n' "${SSH_KEY}" > "${KEYFILE}"
+          if ssh-keygen -y -f "${KEYFILE}" -P '' >/dev/null 2>&1; then
+            echo "SSH deploy key has no passphrase"
+          else
+            if [ -z "${SSH_PASS}" ]; then
+              echo "::error::GCP_VM_SSH_KEY is passphrase-protected. Add repository secret GCP_VM_SSH_KEY_PASSPHRASE, or replace GCP_VM_SSH_KEY with an unencrypted deploy key."
+              exit 1
+            fi
+            if ! ssh-keygen -p -f "${KEYFILE}" -P "${SSH_PASS}" -N ''; then
+              echo "::error::Could not unlock GCP_VM_SSH_KEY (wrong GCP_VM_SSH_KEY_PASSPHRASE?)"
+              exit 1
+            fi
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -173,8 +215,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           script: |
             docker system prune -f
 
@@ -216,8 +257,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           source: "docker-compose.prod.yml,.env.prod,deploy-full-stack.sh"
           target: "/opt/hiremebharat/"
 
@@ -226,8 +266,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           script: |
             cd /opt/hiremebharat
             mv -f .env.prod .env
@@ -239,8 +278,7 @@ jobs:
         with:
           host: ${{ secrets.GCP_VM_IP }}
           username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          passphrase: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+          key_path: .ci_deploy_key
           script: |
             set -e
             for i in $(seq 1 45); do
