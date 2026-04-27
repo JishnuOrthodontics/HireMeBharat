@@ -138,7 +138,6 @@ jobs:
           echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.prod
           echo "FIREBASE_PRIVATE_KEY=\"${{ secrets.FIREBASE_PRIVATE_KEY }}\"" >> .env.prod
           echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env.prod
-          echo "CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}" >> .env.prod
           echo "NODE_ENV=production" >> .env.prod
 
       - name: Copy config to GCP VM
@@ -163,6 +162,19 @@ jobs:
             mv .env.prod .env
             chmod +x deploy-service.sh
             ./deploy-service.sh ${{ matrix.service }} ${{ github.sha }}
+
+  verify-public-api:
+    name: Verify public API (HTTPS)
+    needs: build-and-deploy
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Curl public /api/health via Cloudflare
+        env:
+          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL || secrets.PUBLIC_API_URL }}
+        run: bash scripts/ci/verify-public-api.sh
 
   full-stack-deploy:
     needs: meta
@@ -225,13 +237,11 @@ jobs:
           echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.prod
           echo "FIREBASE_PRIVATE_KEY=\"${{ secrets.FIREBASE_PRIVATE_KEY }}\"" >> .env.prod
           echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env.prod
-          echo "CLOUDFLARE_TUNNEL_TOKEN=${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}" >> .env.prod
           echo "NODE_ENV=production" >> .env.prod
           if [ -z "${{ secrets.REGISTRY_USER }}" ]; then echo "REGISTRY_USER=hiremeregistry" >> .env.prod; else echo "REGISTRY_USER=${{ secrets.REGISTRY_USER }}" >> .env.prod; fi
           if [ -z "${{ secrets.REGISTRY_PASSWORD }}" ]; then echo "REGISTRY_PASSWORD=hiremeregistry" >> .env.prod; else echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}" >> .env.prod; fi
 
       - name: Docker login to VM registry
-        continue-on-error: true
         run: |
           RU=$(grep '^REGISTRY_USER=' .env.prod | cut -d= -f2-)
           RP=$(grep '^REGISTRY_PASSWORD=' .env.prod | cut -d= -f2-)
@@ -293,3 +303,8 @@ jobs:
             echo "Health check failed"
             docker compose -f /opt/hiremebharat/docker-compose.prod.yml ps || true
             exit 1
+
+      - name: Verify public API URL (HTTPS via Cloudflare)
+        env:
+          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL || secrets.PUBLIC_API_URL }}
+        run: bash scripts/ci/verify-public-api.sh
