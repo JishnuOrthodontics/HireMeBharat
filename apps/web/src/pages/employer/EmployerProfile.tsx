@@ -53,8 +53,20 @@ export default function EmployerProfile() {
     <>
       {/* Company Header */}
       <div className="dash-card">
-        <div className="empr-profile-banner">
-          <div className="empr-profile-logo">{initials}</div>
+        <div
+          className="empr-profile-banner"
+          style={profile.bannerUrl ? { backgroundImage: `url(${profile.bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+        >
+          {profile.logoUrl ? (
+            <img
+              src={profile.logoUrl}
+              alt={profile.companyName}
+              className="empr-profile-logo"
+              style={{ objectFit: 'cover' }}
+            />
+          ) : (
+            <div className="empr-profile-logo">{initials}</div>
+          )}
         </div>
         <div className="empr-profile-info">
           <h1 className="empr-company-name">{profile.companyName}</h1>
@@ -67,6 +79,10 @@ export default function EmployerProfile() {
             <span className="empr-company-meta-item">
               <span className="material-symbols-outlined">groups</span>
               {profile.companySize} employees
+            </span>
+            <span className="empr-company-meta-item">
+              <span className="material-symbols-outlined">history</span>
+              Founded {profile.foundedYear}
             </span>
             <span className="empr-company-meta-item">
               <span className="material-symbols-outlined">location_on</span>
@@ -84,6 +100,19 @@ export default function EmployerProfile() {
               <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 20px' }} onClick={save}>Save</button>
             )}
             <button className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 20px' }} onClick={load}>Refresh</button>
+            <a className="btn btn-ghost" style={{ fontSize: 13, padding: '8px 20px' }} href="/employer/settings">Company Settings</a>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
+            {profile.websiteUrl && (
+              <a href={profile.websiteUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                Website
+              </a>
+            )}
+            {profile.linkedinUrl && (
+              <a href={profile.linkedinUrl} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                LinkedIn
+              </a>
+            )}
           </div>
         </div>
       </div>

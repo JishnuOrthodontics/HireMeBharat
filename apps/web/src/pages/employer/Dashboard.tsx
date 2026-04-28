@@ -5,6 +5,7 @@ import EmployerFeed from './EmployerFeed';
 import EmployerRequisitions from './EmployerRequisitions';
 import EmployerCandidates from './EmployerCandidates';
 import EmployerProfile from './EmployerProfile';
+import EmployerSettings from './EmployerSettings';
 import {
   getEmployerDashboardSummary,
   getEmployerProfile,
@@ -33,7 +34,16 @@ function LeftSidebar({ profile, summary }: { profile: EmployerProfileApi | null;
       <div className="dash-card dash-profile-card">
         <div className="dash-profile-banner" style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.3), rgba(80,250,123,0.12))' }} />
         <div className="dash-profile-card-body">
-          <div className="dash-profile-card-avatar" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)', color: '#1a1a2e' }}>{initials}</div>
+          {profile?.logoUrl ? (
+            <img
+              src={profile.logoUrl}
+              alt={profile.companyName}
+              className="dash-profile-card-avatar"
+              style={{ objectFit: 'cover', border: '1px solid rgba(255,255,255,0.15)' }}
+            />
+          ) : (
+            <div className="dash-profile-card-avatar" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)', color: '#1a1a2e' }}>{initials}</div>
+          )}
           <p className="dash-profile-card-name">{profile?.companyName || 'Employer Company'}</p>
           <p className="dash-profile-card-headline">
             {profile ? `${profile.fundingStage} · ${profile.industry} · ${profile.companySize} employees` : 'Loading company profile...'}
@@ -75,7 +85,7 @@ function LeftSidebar({ profile, summary }: { profile: EmployerProfileApi | null;
             <span className="material-symbols-outlined">support_agent</span>
             Account Manager
           </Link>
-          <Link to="/employer/profile" className="dash-quick-link">
+          <Link to="/employer/settings" className="dash-quick-link">
             <span className="material-symbols-outlined">settings</span>
             Company Settings
           </Link>
@@ -239,6 +249,7 @@ export default function Dashboard() {
         <Route path="messages" element={<ComingSoon title="Messages" />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="profile" element={<EmployerProfile />} />
+        <Route path="settings" element={<EmployerSettings />} />
         <Route path="*" element={<EmployerFeed />} />
       </Routes>
     </DashboardLayout>

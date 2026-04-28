@@ -86,11 +86,17 @@ export interface EmployerMatchApi {
 export interface EmployerProfileApi {
   companyName: string;
   tagline: string;
+  logoUrl: string;
+  bannerUrl: string;
+  websiteUrl: string;
+  linkedinUrl: string;
   industry: string;
   companySize: number;
+  foundedYear: number;
   location: string;
   fundingStage: string;
   fundingRaised: string;
+  showProfileToEmployees: boolean;
   about: string;
   benefits: string[];
   updatedAt?: string | null;
