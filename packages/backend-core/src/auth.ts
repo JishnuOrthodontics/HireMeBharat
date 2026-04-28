@@ -7,24 +7,50 @@ import './types.js';
 
 let firebaseInitialized = false;
 
+/** Normalize PEM from .env (escaped \\n, optional wrapping quotes, CRLF). */
+function normalizePrivateKey(raw: string | undefined): string | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  let k = String(raw).trim();
+  if ((k.startsWith('"') && k.endsWith('"')) || (k.startsWith("'") && k.endsWith("'"))) {
+    k = k.slice(1, -1).replace(/\\"/g, '"');
+  }
+  k = k.replace(/\r\n/g, '\n').replace(/\\n/g, '\n');
+  return k.length ? k : undefined;
+}
+
 function initFirebase() {
   if (firebaseInitialized) return;
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || 'hiremeapp2026';
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const projectId = (process.env.FIREBASE_PROJECT_ID || 'hiremeapp2026-72a87').trim();
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
-  if (privateKey) {
-    // Production: Use environment variables
+  const isProd = process.env.NODE_ENV === 'production';
+
+  if (isProd) {
+    if (!privateKey || !clientEmail) {
+      throw new Error(
+        'Production requires FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY. Check GitHub Actions secrets and /opt/hiremebharat/.env on the VM.'
+      );
+    }
+    if (!privateKey.includes('BEGIN PRIVATE KEY')) {
+      throw new Error(
+        'FIREBASE_PRIVATE_KEY is not a valid PEM (missing BEGIN PRIVATE KEY). Regenerate the key in GitHub Secrets or fix .env — multiline keys must not be broken by shell echo; use scripts/ci/write-env-prod.cjs in CI.'
+      );
+    }
+  }
+
+  if (privateKey && clientEmail) {
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        clientEmail,
         privateKey,
       }),
     });
     console.log(`🔐 Firebase Admin SDK initialized (service account) projectId=${projectId}`);
   } else {
-    // Development: Initialize with project ID only (uses ADC or emulator)
+    // Development: project ID only (ADC / emulator) — verifyIdToken may not work without credentials
     admin.initializeApp({
       projectId,
     });

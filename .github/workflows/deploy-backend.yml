@@ -10,6 +10,7 @@ on:
       - 'apps/api-employer/**'
       - 'apps/api-admin/**'
       - 'packages/backend-core/**'
+      - 'scripts/ci/**'
       - '.github/workflows/deploy-backend.yml'
       - 'deploy-full-stack.sh'
       - 'docker-compose.prod.yml'
@@ -34,6 +35,7 @@ jobs:
             match:
               - '.github/workflows/deploy-backend.yml'
               - 'deploy-full-stack.sh'
+              - 'scripts/ci/**'
       - name: Set run_full_stack
         id: set
         run: |
@@ -148,12 +150,12 @@ jobs:
           cache-to: type=registry,ref=${{ secrets.GCP_VM_IP }}:5000/hiremebharat-${{ matrix.service }}:cache,mode=max
 
       - name: Prepare configuration files
-        run: |
-          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.prod
-          echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.prod
-          echo "FIREBASE_PRIVATE_KEY=\"${{ secrets.FIREBASE_PRIVATE_KEY }}\"" >> .env.prod
-          echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env.prod
-          echo "NODE_ENV=production" >> .env.prod
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+        run: node scripts/ci/write-env-prod.cjs
 
       - name: Copy config to GCP VM
         if: steps.changes.outputs.service-changed == 'true'
@@ -261,14 +263,15 @@ jobs:
             docker system prune -f
 
       - name: Prepare configuration files
-        run: |
-          echo "MONGODB_URI=${{ secrets.MONGODB_URI }}" > .env.prod
-          echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env.prod
-          echo "FIREBASE_PRIVATE_KEY=\"${{ secrets.FIREBASE_PRIVATE_KEY }}\"" >> .env.prod
-          echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env.prod
-          echo "NODE_ENV=production" >> .env.prod
-          if [ -z "${{ secrets.REGISTRY_USER }}" ]; then echo "REGISTRY_USER=hiremeregistry" >> .env.prod; else echo "REGISTRY_USER=${{ secrets.REGISTRY_USER }}" >> .env.prod; fi
-          if [ -z "${{ secrets.REGISTRY_PASSWORD }}" ]; then echo "REGISTRY_PASSWORD=hiremeregistry" >> .env.prod; else echo "REGISTRY_PASSWORD=${{ secrets.REGISTRY_PASSWORD }}" >> .env.prod; fi
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          EMIT_REGISTRY: '1'
+        run: node scripts/ci/write-env-prod.cjs
 
       - name: Docker login to VM registry
         run: |
