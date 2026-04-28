@@ -16,6 +16,17 @@ const UPSTREAM_EMPLOYEE = process.env.UPSTREAM_EMPLOYEE ?? 'http://127.0.0.1:300
 const UPSTREAM_EMPLOYER = process.env.UPSTREAM_EMPLOYER ?? 'http://127.0.0.1:3004';
 const UPSTREAM_ADMIN = process.env.UPSTREAM_ADMIN ?? 'http://127.0.0.1:3005';
 
+/** @fastify/reply-from may drop `authorization` while handling Connection hop-by-hop headers — always forward from the client request. */
+function preserveInboundAuth(originalReq: FastifyRequest, headers: Record<string, unknown>) {
+  const auth = originalReq.headers.authorization;
+  if (typeof auth === 'string') {
+    (headers as Record<string, string>).authorization = auth;
+  }
+  return headers as Record<string, string>;
+}
+
+const forwardAuthReplyOptions = { rewriteRequestHeaders: preserveInboundAuth };
+
 async function buildApp() {
   const app = Fastify({
     logger: {
@@ -41,6 +52,7 @@ async function buildApp() {
     upstream: UPSTREAM_AUTH,
     prefix: '/api/public',
     rewritePrefix: '/api/public',
+    replyOptions: forwardAuthReplyOptions,
   });
 
   // Protected routes with RBAC -> appropriate microservice
@@ -48,6 +60,7 @@ async function buildApp() {
     upstream: UPSTREAM_EMPLOYEE,
     prefix: '/api/employee',
     rewritePrefix: '/api/employee',
+    replyOptions: forwardAuthReplyOptions,
     // Pre-validation hook - check authentication and role
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
@@ -59,6 +72,7 @@ async function buildApp() {
     upstream: UPSTREAM_EMPLOYER,
     prefix: '/api/employer',
     rewritePrefix: '/api/employer',
+    replyOptions: forwardAuthReplyOptions,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('EMPLOYER')(request, reply);
@@ -69,6 +83,7 @@ async function buildApp() {
     upstream: UPSTREAM_ADMIN,
     prefix: '/api/admin',
     rewritePrefix: '/api/admin',
+    replyOptions: forwardAuthReplyOptions,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('ADMIN')(request, reply);
@@ -80,6 +95,7 @@ async function buildApp() {
     upstream: UPSTREAM_AUTH,
     prefix: '/api',
     rewritePrefix: '/api',
+    replyOptions: forwardAuthReplyOptions,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
     }
