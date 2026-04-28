@@ -2,20 +2,20 @@ version: '3.8'
 
 services:
   # API Gateway
+  # Secrets (MONGODB_URI, FIREBASE_*) come from `.env` via env_file — not ${VAR} interpolation,
+  # which can truncate or corrupt multiline PEM keys.
   api-gateway:
     image: localhost:5000/hiremebharat-api-gateway:latest
     ports:
       - "3001:3001"
+    env_file:
+      - .env
     environment:
       - PORT=3001
       - HOST=0.0.0.0
       - NODE_ENV=production
       - FRONTEND_URL=https://hiremebharat.com
-      - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
       - UPSTREAM_AUTH=http://api-auth:3002
       - UPSTREAM_EMPLOYEE=http://api-employee:3003
       - UPSTREAM_EMPLOYER=http://api-employer:3004
@@ -25,61 +25,53 @@ services:
   # Auth Service (handles public routes)
   api-auth:
     image: localhost:5000/hiremebharat-api-auth:latest
+    env_file:
+      - .env
     environment:
       - PORT=3002
       - HOST=0.0.0.0
       - NODE_ENV=production
       - FRONTEND_URL=https://hiremebharat.com
-      - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Employee Service
   api-employee:
     image: localhost:5000/hiremebharat-api-employee:latest
+    env_file:
+      - .env
     environment:
       - PORT=3003
       - HOST=0.0.0.0
       - NODE_ENV=production
       - FRONTEND_URL=https://hiremebharat.com
-      - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Employer Service
   api-employer:
     image: localhost:5000/hiremebharat-api-employer:latest
+    env_file:
+      - .env
     environment:
       - PORT=3004
       - HOST=0.0.0.0
       - NODE_ENV=production
       - FRONTEND_URL=https://hiremebharat.com
-      - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Admin Service
   api-admin:
     image: localhost:5000/hiremebharat-api-admin:latest
+    env_file:
+      - .env
     environment:
       - PORT=3005
       - HOST=0.0.0.0
       - NODE_ENV=production
       - FRONTEND_URL=https://hiremebharat.com
-      - MONGODB_URI=${MONGODB_URI}
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     restart: unless-stopped
 
   # Local Docker Registry (for GCP deployment)
