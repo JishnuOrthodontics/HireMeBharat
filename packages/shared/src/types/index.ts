@@ -6,7 +6,10 @@ export enum UserRole {
 
 export interface UserProfile {
   _id?: string;
-  firebaseUid: string;
+  /** Canonical user id from Firebase/Auth layer. */
+  uid: string;
+  /** @deprecated use `uid` (kept for backward compatibility). */
+  firebaseUid?: string;
   email: string;
   displayName: string;
   role: UserRole;
@@ -32,8 +35,14 @@ export interface Requisition {
 
 export interface CandidateProfile {
   _id?: string;
+  /** References users.uid */
   userId: string;
   skills: string[];
+  headline?: string;
+  location?: string;
+  openToRelocation?: boolean;
+  yearsExperience?: number;
+  resumeUrl?: string;
   experience: {
     title: string;
     company: string;
@@ -52,11 +61,17 @@ export interface CandidateProfile {
 
 export interface Match {
   _id?: string;
-  candidateId: string;
+  employeeUid: string;
   requisitionId: string;
+  title: string;
+  company: string;
+  location: string;
+  salaryRange?: string;
+  tags?: string[];
   score: number;
-  status: 'PENDING' | 'REVIEWED' | 'ACCEPTED' | 'DECLINED' | 'INTERVIEW';
+  status: 'NEW' | 'SAVED' | 'INTERESTED' | 'APPLIED' | 'INTERVIEW' | 'DECLINED';
   reviewedBy?: string;
+  updatedByUid?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,7 +79,7 @@ export interface Match {
 export interface Message {
   _id?: string;
   conversationId: string;
-  senderId: string;
+  senderUid: string;
   content: string;
   timestamp: Date;
   readAt?: Date;
@@ -90,10 +105,11 @@ export interface Escalation {
 
 export interface Notification {
   _id?: string;
-  userId: string;
+  userUid: string;
   type: 'MATCH' | 'MESSAGE' | 'ESCALATION' | 'SYSTEM';
   title: string;
   content: string;
   read: boolean;
   createdAt: Date;
 }
+

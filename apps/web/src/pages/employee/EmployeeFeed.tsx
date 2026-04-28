@@ -1,5 +1,55 @@
+import { useEffect, useMemo, useState } from 'react';
+import { getDashboardSummary, getEmployeeMatches, type EmployeeMatchApi, updateMatchStatus } from '../../lib/employeeApi';
+
 /* ===== Home Feed ===== */
 export default function EmployeeFeed() {
+  const [matches, setMatches] = useState<EmployeeMatchApi[]>([]);
+  const [summary, setSummary] = useState<{ activeMatches: number; interviews: number; unreadNotifications: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [updatingId, setUpdatingId] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const [matchRes, summaryRes] = await Promise.all([
+          getEmployeeMatches({ limit: 5 }),
+          getDashboardSummary(),
+        ]);
+        if (cancelled) return;
+        setMatches(matchRes.matches);
+        setSummary(summaryRes.summary);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Failed to load feed');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const marketMessage = useMemo(() => {
+    if (!summary) return 'Fetching your latest market intelligence...';
+    return `You currently have ${summary.activeMatches} active matches and ${summary.interviews} interviews in progress.`;
+  }, [summary]);
+
+  const onMatchAction = async (matchId: string, action: 'interest' | 'save' | 'decline') => {
+    setUpdatingId(matchId + action);
+    try {
+      await updateMatchStatus(matchId, action);
+      const refreshed = await getEmployeeMatches({ limit: 5 });
+      setMatches(refreshed.matches);
+    } catch (err: any) {
+      setError(err.message || 'Could not update match');
+    } finally {
+      setUpdatingId('');
+    }
+  };
+
   return (
     <>
       {/* Market Intelligence Banner */}
@@ -11,10 +61,7 @@ export default function EmployeeFeed() {
             <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)' }}>Your weekly career market summary</p>
           </div>
         </div>
-        <p style={{ fontSize: 14, color: 'var(--color-on-surface-variant)', lineHeight: 1.6 }}>
-          Engineering leadership demand is up <strong style={{ color: 'var(--color-primary-container)' }}>18% this quarter</strong>. 
-          Companies in AI/ML are aggressively hiring VP-level candidates with your skill profile. Your concierge has identified 5 new opportunities this week.
-        </p>
+        <p style={{ fontSize: 14, color: 'var(--color-on-surface-variant)', lineHeight: 1.6 }}>{marketMessage}</p>
       </div>
 
       {/* New Matches Feed */}
@@ -24,61 +71,55 @@ export default function EmployeeFeed() {
           <a href="#" className="dash-card-action">View all matches</a>
         </div>
 
-        {[
-          {
-            icon: '🚀', title: 'VP of Product Engineering', company: 'Stealth AI Startup · Series C',
-            score: 94, salary: '$240k - $300k + Equity', location: 'San Francisco · Hybrid',
-            tags: ['AI/ML', 'Scale-ups', 'Platform'], time: '2 hours ago', featured: true,
-          },
-          {
-            icon: '🤖', title: 'Head of AI Infrastructure', company: 'NextGen Robotics · Public',
-            score: 91, salary: '$220k - $280k', location: 'New York · Remote',
-            tags: ['ML Ops', 'Distributed Systems', 'Leadership'], time: '5 hours ago', featured: false,
-          },
-          {
-            icon: '⚡', title: 'CTO', company: 'FinTech Disruptor · Series B',
-            score: 88, salary: '$260k - $320k + Equity', location: 'Austin · On-site',
-            tags: ['Full-Stack', 'Fintech', 'Team Building'], time: '1 day ago', featured: false,
-          },
-          {
-            icon: '💎', title: 'Director of Engineering', company: 'Enterprise SaaS · Unicorn',
-            score: 85, salary: '$210k - $260k', location: 'Seattle · Hybrid',
-            tags: ['SaaS', 'B2B', 'Kubernetes'], time: '2 days ago', featured: false,
-          },
-          {
-            icon: '🌐', title: 'VP Engineering, Core Platform', company: 'Global Marketplace · IPO Track',
-            score: 82, salary: '$230k - $290k + RSU', location: 'Remote (US)',
-            tags: ['Marketplace', 'Microservices', 'Mentorship'], time: '3 days ago', featured: false,
-          },
-        ].map((match, i) => (
-          <div key={i} className={`emp-match-card ${match.featured ? 'emp-match-featured' : ''}`}>
-            <div className="emp-match-logo">{match.icon}</div>
+        {loading && <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>Loading curated matches...</p>}
+        {error && <p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p>}
+        {!loading && !error && matches.length === 0 && (
+          <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>No curated matches yet. Your concierge will add opportunities soon.</p>
+        )}
+
+        {matches.map((match, i) => (
+          <div key={match.id} className={`emp-match-card ${i === 0 ? 'emp-match-featured' : ''}`}>
+            <div className="emp-match-logo">{i === 0 ? '🚀' : '💼'}</div>
             <div className="emp-match-info">
               <p className="emp-match-title">{match.title}</p>
               <p className="emp-match-company">{match.company}</p>
               <div className="emp-match-meta">
                 <span className="emp-match-meta-item">
                   <span className="material-symbols-outlined">location_on</span>
-                  {match.location}
+                  {match.location || 'Location TBD'}
                 </span>
                 <span className="emp-match-meta-item">
                   <span className="material-symbols-outlined">payments</span>
-                  {match.salary}
+                  {match.salaryRange || 'Compensation discussed during screening'}
                 </span>
               </div>
               <div className="emp-match-tags">
-                {match.tags.map(tag => <span key={tag} className="emp-match-tag">{tag}</span>)}
+                {(match.tags || []).slice(0, 4).map(tag => <span key={tag} className="emp-match-tag">{tag}</span>)}
               </div>
               <div className="emp-match-actions">
-                <button className="btn btn-primary" style={{ fontSize: 13, padding: '6px 16px' }}>Express Interest</button>
-                <button className="btn btn-ghost" style={{ fontSize: 13, padding: '6px 16px' }}>Save</button>
+                <button
+                  className="btn btn-primary"
+                  style={{ fontSize: 13, padding: '6px 16px' }}
+                  disabled={Boolean(updatingId)}
+                  onClick={() => onMatchAction(match.id, 'interest')}
+                >
+                  {updatingId === match.id + 'interest' ? 'Saving...' : 'Express Interest'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 13, padding: '6px 16px' }}
+                  disabled={Boolean(updatingId)}
+                  onClick={() => onMatchAction(match.id, 'save')}
+                >
+                  {updatingId === match.id + 'save' ? 'Saving...' : 'Save'}
+                </button>
               </div>
             </div>
             <div className="emp-match-right">
               <span className={`dash-match-score ${match.score >= 90 ? 'high' : match.score >= 80 ? 'medium' : 'low'}`}>
                 {match.score}% Match
               </span>
-              <span className="emp-match-time">{match.time}</span>
+              <span className="emp-match-time">{match.status}</span>
             </div>
           </div>
         ))}
@@ -107,3 +148,4 @@ export default function EmployeeFeed() {
     </>
   );
 }
+

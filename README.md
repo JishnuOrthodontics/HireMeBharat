@@ -230,3 +230,36 @@ The workflow runs `scripts/admin/bootstrap-admin.cjs` and:
 
 No admin credentials are committed in code; secrets come from GitHub Actions secrets.
 
+## Employee dashboard data APIs
+
+Employee views now read/write real backend data through `api-employee` (role-scoped to `EMPLOYEE`):
+
+- `GET/PATCH /api/employee/profile`
+- `GET /api/employee/matches?status=ALL|NEW|SAVED|INTERESTED|APPLIED|INTERVIEW|DECLINED`
+- `POST /api/employee/matches/:id/interest`
+- `POST /api/employee/matches/:id/save`
+- `POST /api/employee/matches/:id/decline`
+- `GET /api/employee/concierge/messages`
+- `POST /api/employee/concierge/messages`
+- `GET /api/employee/notifications`
+- `POST /api/employee/notifications/:id/read`
+- `GET /api/employee/dashboard-summary`
+
+Backed MongoDB collections/indexes:
+
+- `candidate_profiles` (`userId` unique)
+- `employee_matches` (`employeeUid`, `status`, `updatedAt`)
+- `employee_conversations` (`employeeUid` unique)
+- `employee_messages` (`conversationId`, `timestamp`)
+- `notifications` (`userUid`, `read`, `createdAt`)
+
+### Employee API smoke test
+
+Use a valid Firebase ID token for an employee user:
+
+```bash
+API_URL=https://api.hiremebharat.com \
+ID_TOKEN=<firebase-id-token> \
+bash scripts/ci/verify-employee-api.sh
+```
+

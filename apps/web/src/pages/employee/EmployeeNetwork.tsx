@@ -1,30 +1,67 @@
-export default function EmployeeNetwork() {
-  const connections = [
-    { name: 'Marcus Chen', title: 'CTO at DataFlow', initials: 'MC', mutual: 12 },
-    { name: 'Elena Vasquez', title: 'VP Engineering at Stripe', initials: 'EV', mutual: 8 },
-    { name: 'David Park', title: 'Director of AI at Meta', initials: 'DP', mutual: 15 },
-    { name: 'Aisha Rahman', title: 'Head of Platform at Figma', initials: 'AR', mutual: 6 },
-    { name: 'James Torres', title: 'SVP Product at Coinbase', initials: 'JT', mutual: 9 },
-    { name: 'Sophie Liu', title: 'Engineering Manager at Google', initials: 'SL', mutual: 11 },
-  ];
+import { useEffect, useMemo, useState } from 'react';
+import { getEmployeeMatches, type EmployeeMatchApi } from '../../lib/employeeApi';
 
-  const suggestions = [
-    { name: 'Rachel Kim', title: 'CTO at Stealth Startup', initials: 'RK', reason: 'Similar background' },
-    { name: 'Omar Hassan', title: 'VP Eng at Runway', initials: 'OH', reason: 'AI expertise match' },
-    { name: 'Lisa Chen', title: 'Director at TechCrunch', initials: 'LC', reason: 'Industry insights' },
-  ];
+export default function EmployeeNetwork() {
+  const [matches, setMatches] = useState<EmployeeMatchApi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await getEmployeeMatches({ status: 'ALL', limit: 20 });
+        if (!cancelled) setMatches(res.matches);
+      } catch (err: any) {
+        if (!cancelled) setError(err.message || 'Unable to load network suggestions');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const connections = useMemo(() => (
+    matches
+      .filter((m) => m.status === 'INTERVIEW' || m.status === 'INTERESTED')
+      .map((m, i) => ({
+        name: `${m.company} Hiring Team`,
+        title: m.title,
+        initials: m.company.slice(0, 2).toUpperCase(),
+        mutual: 3 + (m.score % 10),
+        key: `${m.id}-${i}`,
+      }))
+  ), [matches]);
+
+  const suggestions = useMemo(() => (
+    matches
+      .filter((m) => m.status === 'NEW' || m.status === 'SAVED')
+      .slice(0, 6)
+      .map((m, i) => ({
+        name: `${m.company} Recruiter`,
+        title: m.title,
+        initials: m.company.slice(0, 2).toUpperCase(),
+        reason: m.tags?.[0] ? `${m.tags[0]} expertise match` : 'Similar role interests',
+        key: `${m.id}-${i}`,
+      }))
+  ), [matches]);
 
   return (
     <>
       <div className="dash-card">
         <div className="dash-card-header">
           <span className="dash-card-title">Your Network</span>
-          <span style={{ fontSize: 13, color: 'var(--color-on-surface-variant)' }}>{connections.length} connections</span>
+          <span style={{ fontSize: 13, color: 'var(--color-on-surface-variant)' }}>{connections.length} active connections</span>
         </div>
         <div className="dash-card-body">
+          {loading && <p style={{ color: 'var(--color-on-surface-variant)' }}>Loading your network...</p>}
+          {error && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
           <div className="emp-network-grid">
-            {connections.map((c, i) => (
-              <div key={i} className="dash-card emp-network-card glass-card-hover">
+            {!loading && !error && connections.map((c) => (
+              <div key={c.key} className="dash-card emp-network-card glass-card-hover">
                 <div className="emp-network-avatar">{c.initials}</div>
                 <p className="emp-network-name">{c.name}</p>
                 <p className="emp-network-title">{c.title}</p>
@@ -35,6 +72,9 @@ export default function EmployeeNetwork() {
                 </button>
               </div>
             ))}
+            {!loading && !error && connections.length === 0 && (
+              <p style={{ color: 'var(--color-on-surface-variant)' }}>No active connections yet. Express interest in matches to build your network.</p>
+            )}
           </div>
         </div>
       </div>
@@ -45,8 +85,8 @@ export default function EmployeeNetwork() {
         </div>
         <div className="dash-card-body">
           <div className="emp-network-grid">
-            {suggestions.map((s, i) => (
-              <div key={i} className="dash-card emp-network-card glass-card-hover">
+            {suggestions.map((s) => (
+              <div key={s.key} className="dash-card emp-network-card glass-card-hover">
                 <div className="emp-network-avatar" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)' }}>{s.initials}</div>
                 <p className="emp-network-name">{s.name}</p>
                 <p className="emp-network-title">{s.title}</p>
@@ -57,9 +97,13 @@ export default function EmployeeNetwork() {
                 </button>
               </div>
             ))}
+            {!loading && !error && suggestions.length === 0 && (
+              <p style={{ color: 'var(--color-on-surface-variant)' }}>No suggestions yet. Save more matches to get curated connections.</p>
+            )}
           </div>
         </div>
       </div>
     </>
   );
 }
+
