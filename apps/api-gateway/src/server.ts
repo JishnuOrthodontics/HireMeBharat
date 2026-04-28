@@ -40,13 +40,14 @@ async function buildApp() {
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_AUTH,
     prefix: '/api/public',
-    // Decode the response
+    rewritePrefix: '/api/public',
   });
 
   // Protected routes with RBAC -> appropriate microservice
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_EMPLOYEE,
     prefix: '/api/employee',
+    rewritePrefix: '/api/employee',
     // Pre-validation hook - check authentication and role
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
@@ -57,6 +58,7 @@ async function buildApp() {
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_EMPLOYER,
     prefix: '/api/employer',
+    rewritePrefix: '/api/employer',
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('EMPLOYER')(request, reply);
@@ -66,6 +68,7 @@ async function buildApp() {
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_ADMIN,
     prefix: '/api/admin',
+    rewritePrefix: '/api/admin',
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('ADMIN')(request, reply);
@@ -76,6 +79,7 @@ async function buildApp() {
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_AUTH,
     prefix: '/api',
+    rewritePrefix: '/api',
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
     }
