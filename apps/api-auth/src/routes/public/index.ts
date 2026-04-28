@@ -5,7 +5,7 @@ import { getBearerAuthorizationHeader } from '@hiremebharat/backend-core';
 export async function publicRoutes(app: FastifyInstance) {
   const classifyVerifyError = (msg: string) => {
     const m = msg.toLowerCase();
-    if (m.includes('audience') || m.includes('aud claim')) return 'project-mismatch';
+    if (m.includes('audience') || m.includes('aud claim') || m.includes('issuer') || m.includes('iss claim')) return 'project-mismatch';
     if (m.includes('expired')) return 'expired';
     if (m.includes('issued at') || m.includes('future')) return 'clock-skew';
     if (m.includes('certificate') || m.includes('kid')) return 'cert-key-mismatch';
@@ -22,6 +22,7 @@ export async function publicRoutes(app: FastifyInstance) {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       (request as any).verifyTokenReason = classifyVerifyError(msg);
+      (request as any).verifyTokenDetail = msg.slice(0, 180);
       app.log.warn({ verifyIdTokenError: msg, reason: (request as any).verifyTokenReason }, 'verifyIdToken failed');
       return null;
     }
@@ -32,10 +33,12 @@ export async function publicRoutes(app: FastifyInstance) {
     const decoded = await verifyToken(request);
     if (!decoded) {
       const reason = (request as any).verifyTokenReason || 'invalid';
+      const detail = (request as any).verifyTokenDetail || '';
       return reply
         .header('x-auth-debug-reason', String(reason))
+        .header('x-auth-debug-detail', String(detail))
         .code(401)
-        .send({ error: 'Unauthorized', message: 'Invalid token', reason });
+        .send({ error: 'Unauthorized', message: 'Invalid token', reason, detail });
     }
 
     const { displayName, role, photoURL } = request.body as any;
@@ -120,10 +123,12 @@ export async function publicRoutes(app: FastifyInstance) {
     const decoded = await verifyToken(request);
     if (!decoded) {
       const reason = (request as any).verifyTokenReason || 'invalid';
+      const detail = (request as any).verifyTokenDetail || '';
       return reply
         .header('x-auth-debug-reason', String(reason))
+        .header('x-auth-debug-detail', String(detail))
         .code(401)
-        .send({ error: 'Unauthorized', message: 'Invalid token', reason });
+        .send({ error: 'Unauthorized', message: 'Invalid token', reason, detail });
     }
 
     try {
