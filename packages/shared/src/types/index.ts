@@ -33,6 +33,55 @@ export interface Requisition {
   updatedAt: Date;
 }
 
+export type EmployerRequisitionStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'FILLED' | 'CLOSED';
+export type EmployerCandidateStage = 'SOURCED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
+
+export interface EmployerRequisition {
+  _id?: string;
+  employerUid: string;
+  title: string;
+  department: string;
+  location: string;
+  employmentType: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
+  description: string;
+  requirements: string[];
+  salaryMin: number;
+  salaryMax: number;
+  salaryCurrency: string;
+  status: EmployerRequisitionStatus;
+  featured?: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EmployerCandidatePipeline {
+  _id?: string;
+  employerUid: string;
+  requisitionId: string;
+  employeeUid: string;
+  stage: EmployerCandidateStage;
+  score: number;
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface EmployerProfile {
+  _id?: string;
+  employerUid: string;
+  companyName: string;
+  tagline: string;
+  industry: string;
+  companySize: number;
+  location: string;
+  fundingStage: string;
+  fundingRaised: string;
+  about: string;
+  benefits: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface CandidateProfile {
   _id?: string;
   /** References users.uid */

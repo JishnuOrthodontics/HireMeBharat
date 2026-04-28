@@ -1,9 +1,16 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import EmployerFeed from './EmployerFeed';
 import EmployerRequisitions from './EmployerRequisitions';
 import EmployerCandidates from './EmployerCandidates';
 import EmployerProfile from './EmployerProfile';
+import {
+  getEmployerDashboardSummary,
+  getEmployerProfile,
+  type EmployerProfileApi,
+  type EmployerSummaryApi,
+} from '../../lib/employerApi';
 import './Employer.css';
 
 const navItems = [
@@ -15,29 +22,33 @@ const navItems = [
 ];
 
 /* ===== Left Sidebar ===== */
-function LeftSidebar() {
+function LeftSidebar({ profile, summary }: { profile: EmployerProfileApi | null; summary: EmployerSummaryApi | null }) {
+  const initials = useMemo(
+    () => (profile?.companyName || 'Employer').split(' ').map((s) => s[0]).join('').slice(0, 2).toUpperCase(),
+    [profile]
+  );
   return (
     <>
       {/* Company Card */}
       <div className="dash-card dash-profile-card">
         <div className="dash-profile-banner" style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.3), rgba(80,250,123,0.12))' }} />
         <div className="dash-profile-card-body">
-          <div className="dash-profile-card-avatar" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)', color: '#1a1a2e' }}>TV</div>
-          <p className="dash-profile-card-name">TechVentures Inc.</p>
+          <div className="dash-profile-card-avatar" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)', color: '#1a1a2e' }}>{initials}</div>
+          <p className="dash-profile-card-name">{profile?.companyName || 'Employer Company'}</p>
           <p className="dash-profile-card-headline">
-            Series C · AI/ML · 450 employees
+            {profile ? `${profile.fundingStage} · ${profile.industry} · ${profile.companySize} employees` : 'Loading company profile...'}
           </p>
           <div className="dash-profile-stats">
             <div className="dash-profile-stat">
-              <div className="dash-profile-stat-value" style={{ color: 'var(--color-secondary)' }}>6</div>
+              <div className="dash-profile-stat-value" style={{ color: 'var(--color-secondary)' }}>{summary?.openRoles ?? 0}</div>
               <div className="dash-profile-stat-label">Open Roles</div>
             </div>
             <div className="dash-profile-stat">
-              <div className="dash-profile-stat-value" style={{ color: 'var(--color-secondary)' }}>28</div>
+              <div className="dash-profile-stat-value" style={{ color: 'var(--color-secondary)' }}>{summary?.inPipeline ?? 0}</div>
               <div className="dash-profile-stat-label">In Pipeline</div>
             </div>
             <div className="dash-profile-stat">
-              <div className="dash-profile-stat-value" style={{ color: 'var(--color-secondary)' }}>3</div>
+              <div className="dash-profile-stat-value" style={{ color: 'var(--color-secondary)' }}>{summary?.hired ?? 0}</div>
               <div className="dash-profile-stat-label">Hired</div>
             </div>
           </div>
@@ -47,27 +58,27 @@ function LeftSidebar() {
       {/* Quick Actions */}
       <div className="dash-card">
         <div className="dash-quick-links">
-          <a href="#" className="dash-quick-link">
+          <Link to="/employer/requisitions" className="dash-quick-link">
             <span className="material-symbols-outlined">add_circle</span>
             Post a New Role
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employer/requisitions?status=DRAFT" className="dash-quick-link">
             <span className="material-symbols-outlined">description</span>
             Job Templates
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employer/candidates?stage=INTERVIEW" className="dash-quick-link">
             <span className="material-symbols-outlined">calendar_today</span>
             Interviews
-            <span className="dash-quick-link-badge">4</span>
-          </a>
-          <a href="#" className="dash-quick-link">
+            <span className="dash-quick-link-badge">{summary?.upcomingInterviews?.length ?? 0}</span>
+          </Link>
+          <Link to="/employer/messages" className="dash-quick-link">
             <span className="material-symbols-outlined">support_agent</span>
             Account Manager
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employer/profile" className="dash-quick-link">
             <span className="material-symbols-outlined">settings</span>
             Company Settings
-          </a>
+          </Link>
         </div>
       </div>
     </>
@@ -75,7 +86,15 @@ function LeftSidebar() {
 }
 
 /* ===== Right Sidebar ===== */
-function RightSidebar() {
+function RightSidebar({ summary }: { summary: EmployerSummaryApi | null }) {
+  const stageRows = [
+    { stage: 'SOURCED', label: 'Sourced', color: 'var(--color-on-surface-variant)' },
+    { stage: 'SCREENING', label: 'Screening', color: 'var(--color-secondary)' },
+    { stage: 'INTERVIEW', label: 'Interview', color: 'var(--color-primary-container)' },
+    { stage: 'OFFER', label: 'Offer', color: '#69ff88' },
+    { stage: 'HIRED', label: 'Hired', color: 'white' },
+  ] as const;
+  const maxByStage = Math.max(1, ...(stageRows.map((s) => summary?.byStage?.[s.stage] || 0)));
   return (
     <>
       {/* Hiring Pipeline */}
@@ -85,19 +104,13 @@ function RightSidebar() {
         </div>
         <div className="dash-card-body">
           <div className="empr-pipeline-widget">
-            {[
-              { stage: 'Sourced', count: 45, color: 'var(--color-on-surface-variant)' },
-              { stage: 'Screening', count: 18, color: 'var(--color-secondary)' },
-              { stage: 'Interview', count: 8, color: 'var(--color-primary-container)' },
-              { stage: 'Offer', count: 3, color: '#69ff88' },
-              { stage: 'Hired', count: 2, color: 'white' },
-            ].map((s, i) => (
-              <div key={i} className="empr-pipeline-row">
-                <span className="empr-pipeline-stage">{s.stage}</span>
+            {stageRows.map((s) => (
+              <div key={s.stage} className="empr-pipeline-row">
+                <span className="empr-pipeline-stage">{s.label}</span>
                 <div className="empr-pipeline-bar-track">
-                  <div className="empr-pipeline-bar" style={{ width: `${(s.count / 45) * 100}%`, background: s.color }} />
+                  <div className="empr-pipeline-bar" style={{ width: `${((summary?.byStage?.[s.stage] || 0) / maxByStage) * 100}%`, background: s.color }} />
                 </div>
-                <span className="empr-pipeline-count">{s.count}</span>
+                <span className="empr-pipeline-count">{summary?.byStage?.[s.stage] || 0}</span>
               </div>
             ))}
           </div>
@@ -132,22 +145,23 @@ function RightSidebar() {
       <div className="dash-card">
         <div className="dash-card-header">
           <span className="dash-card-title">Upcoming Interviews</span>
-          <a href="#" className="dash-card-action">View all</a>
+          <Link to="/employer/candidates?stage=INTERVIEW" className="dash-card-action">View all</Link>
         </div>
         <div className="dash-widget-list">
-          {[
-            { candidate: 'E. Thompson', role: 'VP Engineering', time: 'Tomorrow, 2:00 PM', type: 'Video' },
-            { candidate: 'M. Chen', role: 'Head of AI', time: 'Wed, 10:00 AM', type: 'On-site' },
-            { candidate: 'S. Williams', role: 'Director of Eng', time: 'Thu, 3:30 PM', type: 'Phone' },
-          ].map((int, i) => (
-            <div key={i} className="dash-widget-item">
+          {(summary?.upcomingInterviews || []).map((int) => (
+            <div key={int.id} className="dash-widget-item">
               <div className="dash-widget-dot gold" />
               <div>
                 <p className="dash-widget-item-title">{int.candidate} · {int.role}</p>
-                <p className="dash-widget-item-meta">{int.time} · {int.type}</p>
+                <p className="dash-widget-item-meta">
+                  {int.scheduledAt ? new Date(int.scheduledAt).toLocaleString() : 'scheduled'} · {int.type}
+                </p>
               </div>
             </div>
           ))}
+          {(summary?.upcomingInterviews || []).length === 0 && (
+            <p style={{ color: 'var(--color-on-surface-variant)' }}>No interviews scheduled.</p>
+          )}
         </div>
       </div>
 
@@ -159,15 +173,15 @@ function RightSidebar() {
         <div className="dash-card-body">
           <div className="empr-stats-mini">
             <div className="empr-stat-mini">
-              <span className="empr-stat-mini-value">94%</span>
+              <span className="empr-stat-mini-value">{summary?.avgMatchScore ?? 0}%</span>
               <span className="empr-stat-mini-label">Avg Match Score</span>
             </div>
             <div className="empr-stat-mini">
-              <span className="empr-stat-mini-value">4.2d</span>
+              <span className="empr-stat-mini-value">{summary?.timeToShortlistDays ?? 0}d</span>
               <span className="empr-stat-mini-label">Time to Shortlist</span>
             </div>
             <div className="empr-stat-mini">
-              <span className="empr-stat-mini-value">$0</span>
+              <span className="empr-stat-mini-value">{summary?.costPerHire ?? '$0'}</span>
               <span className="empr-stat-mini-label">Cost per Hire</span>
             </div>
           </div>
@@ -177,24 +191,57 @@ function RightSidebar() {
   );
 }
 
+function ComingSoon({ title }: { title: string }) {
+  return (
+    <div className="dash-card dash-card-padded">
+      <h2 className="dash-card-title">{title}</h2>
+      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
+        This section is planned for the next release. Core hiring workflows are now fully functional.
+      </p>
+    </div>
+  );
+}
+
 /* ===== Main Dashboard ===== */
 export default function Dashboard() {
+  const [profile, setProfile] = useState<EmployerProfileApi | null>(null);
+  const [summary, setSummary] = useState<EmployerSummaryApi | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [p, s] = await Promise.all([getEmployerProfile(), getEmployerDashboardSummary()]);
+        if (cancelled) return;
+        setProfile(p.profile);
+        setSummary(s.summary);
+      } catch {
+        // Keep the dashboard usable even if sidebar data fails.
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <DashboardLayout
       navItems={navItems}
       role="employer"
-      userName="James K."
-      userTitle="CEO, TechVentures Inc."
-      leftSidebar={<LeftSidebar />}
-      rightSidebar={<RightSidebar />}
+      userName={profile?.companyName || 'Employer'}
+      userTitle={profile?.tagline || 'Hiring Team'}
+      leftSidebar={<LeftSidebar profile={profile} summary={summary} />}
+      rightSidebar={<RightSidebar summary={summary} />}
     >
       <Routes>
         <Route index element={<EmployerFeed />} />
         <Route path="requisitions" element={<EmployerRequisitions />} />
         <Route path="candidates" element={<EmployerCandidates />} />
+        <Route path="messages" element={<ComingSoon title="Messages" />} />
+        <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="profile" element={<EmployerProfile />} />
         <Route path="*" element={<EmployerFeed />} />
       </Routes>
     </DashboardLayout>
   );
 }
+

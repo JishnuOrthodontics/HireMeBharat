@@ -26,6 +26,8 @@ export const API_PATHS = {
     REQUISITIONS: '/api/employer/requisitions',
     CANDIDATES: '/api/employer/candidates',
     MATCHES: '/api/employer/matches',
+    PROFILE: '/api/employer/profile',
+    DASHBOARD_SUMMARY: '/api/employer/dashboard-summary',
   },
   // Shared (all authenticated)
   SHARED: {
@@ -33,3 +35,4 @@ export const API_PATHS = {
     NOTIFICATIONS: '/api/notifications',
   },
 } as const;
+

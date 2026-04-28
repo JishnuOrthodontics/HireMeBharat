@@ -26,8 +26,8 @@ async function buildApp() {
   });
 
   await registerMongoPlugin(app);
-  await app.register(registerAuthPlugin);
-  await app.register(registerRbacPlugin);
+  await registerAuthPlugin(app);
+  await registerRbacPlugin(app);
 
   // --- Routes ---
   // Employer routes (require auth + EMPLOYER role)

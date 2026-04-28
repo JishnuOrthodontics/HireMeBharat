@@ -263,3 +263,41 @@ ID_TOKEN=<firebase-id-token> \
 bash scripts/ci/verify-employee-api.sh
 ```
 
+## Employer dashboard data APIs
+
+Employer views now read/write real backend data through `api-employer` (role-scoped to `EMPLOYER`):
+
+- `GET /api/employer/requisitions?status=ALL|DRAFT|ACTIVE|PAUSED|FILLED|CLOSED`
+- `POST /api/employer/requisitions`
+- `PATCH /api/employer/requisitions/:id`
+- `GET /api/employer/candidates?stage=ALL|SOURCED|SCREENING|INTERVIEW|OFFER|HIRED|REJECTED`
+- `PATCH /api/employer/candidates/:id/stage`
+- `GET /api/employer/matches`
+- `GET /api/employer/dashboard-summary`
+- `GET /api/employer/activity`
+- `GET/PATCH /api/employer/profile`
+
+Backed MongoDB collections/indexes:
+
+- `employer_profiles` (`employerUid` unique)
+- `employer_requisitions` (`employerUid`, `status`, `updatedAt`)
+- `employer_candidates` (`employerUid`, `stage`, `updatedAt`) and (`employerUid`, `requisitionId`, `stage`)
+- `employer_matches` (`employerUid`, `score`)
+- `employer_interviews` (`employerUid`, `scheduledAt`)
+- `employer_activity` (`employerUid`, `createdAt`)
+
+Notes for this phase:
+
+- Employer `Messages` and `Analytics` navigation routes are intentionally marked **Coming soon**.
+- Core hiring workflows (`Home`, `Requisitions`, `Candidates`, `Profile`) are production-backed.
+
+### Employer API smoke test
+
+Use a valid Firebase ID token for an employer user:
+
+```bash
+API_URL=https://api.hiremebharat.com \
+ID_TOKEN=<firebase-id-token> \
+bash scripts/ci/verify-employer-api.sh
+```
+

@@ -1,31 +1,88 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  createEmployerRequisition,
+  getEmployerRequisitions,
+  patchEmployerRequisition,
+  type EmployerRequisitionApi,
+} from '../../lib/employerApi';
 
-const requisitions = [
-  { title: 'VP of Product Engineering', dept: 'Engineering', location: 'San Francisco · Hybrid', salary: '$240k - $300k', status: 'ACTIVE', candidates: 12, interviews: 3, posted: '5 days ago', featured: true },
-  { title: 'Head of AI/ML', dept: 'AI Research', location: 'New York · Remote', salary: '$220k - $280k', status: 'ACTIVE', candidates: 8, interviews: 1, posted: '1 week ago', featured: false },
-  { title: 'Director of Engineering', dept: 'Platform', location: 'Seattle · Hybrid', salary: '$200k - $260k', status: 'ACTIVE', candidates: 6, interviews: 2, posted: '2 weeks ago', featured: false },
-  { title: 'Senior Architect', dept: 'Infrastructure', location: 'Remote (US)', salary: '$190k - $240k', status: 'ACTIVE', candidates: 4, interviews: 0, posted: '3 weeks ago', featured: false },
-  { title: 'VP of Data Science', dept: 'Data', location: 'Austin · On-site', salary: '$250k - $310k', status: 'PAUSED', candidates: 15, interviews: 4, posted: '1 month ago', featured: false },
-  { title: 'CTO', dept: 'Executive', location: 'San Francisco · On-site', salary: '$300k - $400k', status: 'FILLED', candidates: 22, interviews: 6, posted: '2 months ago', featured: false },
-];
+const tabs = ['ALL', 'ACTIVE', 'PAUSED', 'FILLED', 'DRAFT'] as const;
+type ReqTab = typeof tabs[number];
 
-const tabs = ['All', 'Active', 'Paused', 'Filled', 'Draft'];
+function titleCase(value: string) {
+  return value.charAt(0) + value.slice(1).toLowerCase();
+}
 
 export default function EmployerRequisitions() {
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState<ReqTab>('ALL');
+  const [rows, setRows] = useState<EmployerRequisitionApi[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState('');
 
-  const filtered = activeTab === 'All'
-    ? requisitions
-    : requisitions.filter(r => r.status === activeTab.toUpperCase());
+  const load = async (tab: ReqTab) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await getEmployerRequisitions({ status: tab, limit: 50 });
+      setRows(res.requisitions);
+      setTotal(res.total);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load requisitions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load(activeTab);
+  }, [activeTab]);
+
+  const onCreate = async () => {
+    setBusyId('create');
+    setError('');
+    try {
+      await createEmployerRequisition({
+        title: 'New Requisition',
+        department: 'General',
+        location: 'Remote',
+        description: 'Add detailed role description here.',
+        requirements: [],
+        salaryMin: 0,
+        salaryMax: 0,
+        salaryCurrency: 'USD',
+        status: 'DRAFT',
+      });
+      await load(activeTab);
+    } catch (err: any) {
+      setError(err.message || 'Failed to create requisition');
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  const onStatus = async (id: string, status: EmployerRequisitionApi['status']) => {
+    setBusyId(id + status);
+    setError('');
+    try {
+      await patchEmployerRequisition(id, { status });
+      await load(activeTab);
+    } catch (err: any) {
+      setError(err.message || 'Failed to update status');
+    } finally {
+      setBusyId('');
+    }
+  };
 
   return (
     <>
       <div className="dash-card">
         <div className="dash-card-header">
           <span className="dash-card-title">Requisitions</span>
-          <button className="btn btn-gold" style={{ fontSize: 13, padding: '6px 16px' }}>
+          <button className="btn btn-gold" style={{ fontSize: 13, padding: '6px 16px' }} onClick={onCreate} disabled={busyId === 'create'}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-            New Requisition
+            {busyId === 'create' ? 'Creating...' : 'New Requisition'}
           </button>
         </div>
 
@@ -36,13 +93,17 @@ export default function EmployerRequisitions() {
               className={`empr-filter-tab ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab}
+              {titleCase(tab)}
             </button>
           ))}
         </div>
 
-        {filtered.map((req, i) => (
-          <div key={i} className="empr-req-card">
+        <div style={{ padding: '0 20px 8px', color: 'var(--color-on-surface-variant)', fontSize: 13 }}>{total} total</div>
+        {loading && <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>Loading requisitions...</p>}
+        {error && <p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p>}
+
+        {!loading && !error && rows.map((req) => (
+          <div key={req.id} className="empr-req-card">
             <div className="empr-req-icon">
               <span className="material-symbols-outlined">work</span>
             </div>
@@ -51,7 +112,7 @@ export default function EmployerRequisitions() {
               <div className="empr-req-meta">
                 <span className="empr-req-meta-item">
                   <span className="material-symbols-outlined">apartment</span>
-                  {req.dept}
+                  {req.department || 'Department'}
                 </span>
                 <span className="empr-req-meta-item">
                   <span className="material-symbols-outlined">location_on</span>
@@ -59,26 +120,48 @@ export default function EmployerRequisitions() {
                 </span>
                 <span className="empr-req-meta-item">
                   <span className="material-symbols-outlined">payments</span>
-                  {req.salary}
+                  {req.salaryLabel}
                 </span>
               </div>
               <div className="empr-req-pipeline">
-                <span className={`empr-req-stage-chip ${req.candidates > 0 ? 'has-count' : ''}`}>
-                  {req.candidates} candidates
+                <span className={`empr-req-stage-chip ${req.candidatesInPipeline > 0 ? 'has-count' : ''}`}>
+                  {req.candidatesInPipeline} candidates
                 </span>
-                <span className={`empr-req-stage-chip ${req.interviews > 0 ? 'has-count' : ''}`}>
-                  {req.interviews} interviews
-                </span>
+                <span className="empr-req-stage-chip">{req.employmentType.replace('_', ' ')}</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  disabled={Boolean(busyId)}
+                  onClick={() => onStatus(req.id, req.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')}
+                >
+                  {busyId === req.id + (req.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')
+                    ? 'Saving...'
+                    : req.status === 'ACTIVE'
+                      ? 'Pause'
+                      : 'Activate'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  disabled={Boolean(busyId)}
+                  onClick={() => onStatus(req.id, 'FILLED')}
+                >
+                  {busyId === req.id + 'FILLED' ? 'Saving...' : 'Mark Filled'}
+                </button>
               </div>
             </div>
             <div className="empr-req-right">
               <span className={`dash-status ${req.status.toLowerCase()}`}>{req.status}</span>
-              <span className="empr-req-posted">{req.posted}</span>
+              <span className="empr-req-posted">
+                {req.updatedAt ? new Date(req.updatedAt).toLocaleDateString() : 'recently'}
+              </span>
             </div>
           </div>
         ))}
 
-        {filtered.length === 0 && (
+        {!loading && !error && rows.length === 0 && (
           <div style={{ padding: 48, textAlign: 'center', color: 'var(--color-on-surface-variant)' }}>
             <span className="material-symbols-outlined" style={{ fontSize: 40, opacity: 0.3 }}>search_off</span>
             <p style={{ marginTop: 12 }}>No requisitions in this category</p>
@@ -88,3 +171,4 @@ export default function EmployerRequisitions() {
     </>
   );
 }
+
