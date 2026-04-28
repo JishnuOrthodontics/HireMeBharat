@@ -316,6 +316,19 @@ jobs:
             chmod +x deploy-full-stack.sh
             ./deploy-full-stack.sh ${{ github.sha }}
 
+      - name: Debug api-auth Firebase env on VM
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key_path: .ci_deploy_key
+          script: |
+            set +e
+            cd /opt/hiremebharat
+            docker compose -f docker-compose.prod.yml ps
+            docker compose -f docker-compose.prod.yml exec -T api-auth /bin/sh -lc 'echo "FIREBASE_PROJECT_ID=$FIREBASE_PROJECT_ID"; echo "FIREBASE_CLIENT_EMAIL=$FIREBASE_CLIENT_EMAIL"; printf "FIREBASE_PRIVATE_KEY_LEN=%s\n" "$(printf %s "$FIREBASE_PRIVATE_KEY" | wc -c)"; printf "FIREBASE_PRIVATE_KEY_PREFIX=%s\n" "$(printf %s "$FIREBASE_PRIVATE_KEY" | cut -c1-27)"'
+            docker compose -f docker-compose.prod.yml logs --tail=120 api-auth
+
       - name: Verify API health on VM
         uses: appleboy/ssh-action@v0.1.10
         with:
