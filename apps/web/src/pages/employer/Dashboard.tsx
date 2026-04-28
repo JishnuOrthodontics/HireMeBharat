@@ -85,10 +85,6 @@ function LeftSidebar({ profile, summary }: { profile: EmployerProfileApi | null;
             <span className="material-symbols-outlined">support_agent</span>
             Account Manager
           </Link>
-          <Link to="/employer/settings" className="dash-quick-link">
-            <span className="material-symbols-outlined">settings</span>
-            Company Settings
-          </Link>
         </div>
       </div>
     </>

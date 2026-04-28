@@ -1,13 +1,27 @@
 import { useEffect, useState } from 'react';
 import { getEmployerProfile, getEmployerRequisitions, patchEmployerProfile, type EmployerProfileApi, type EmployerRequisitionApi } from '../../lib/employerApi';
 
+function toBenefits(text: string) {
+  return text
+    .split('\n')
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function fromBenefits(benefits: string[]) {
+  return benefits.join('\n');
+}
+
 export default function EmployerProfile() {
   const [profile, setProfile] = useState<EmployerProfileApi | null>(null);
   const [openRoles, setOpenRoles] = useState<EmployerRequisitionApi[]>([]);
   const [editing, setEditing] = useState(false);
-  const [draftAbout, setDraftAbout] = useState('');
+  const [draft, setDraft] = useState<EmployerProfileApi | null>(null);
+  const [benefitsText, setBenefitsText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [ok, setOk] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -18,8 +32,9 @@ export default function EmployerProfile() {
         getEmployerRequisitions({ status: 'ACTIVE', limit: 10 }),
       ]);
       setProfile(profileRes.profile);
+      setDraft(profileRes.profile);
+      setBenefitsText(fromBenefits(profileRes.profile.benefits || []));
       setOpenRoles(reqRes.requisitions);
-      setDraftAbout(profileRes.profile.about || '');
     } catch (err: any) {
       setError(err.message || 'Failed to load company profile');
     } finally {
@@ -31,21 +46,46 @@ export default function EmployerProfile() {
     load();
   }, []);
 
+  const patch = (next: Partial<EmployerProfileApi>) => {
+    setDraft((prev) => (prev ? { ...prev, ...next } : prev));
+  };
+
   const save = async () => {
-    if (!profile) return;
+    if (!draft) return;
+    setSaving(true);
     setError('');
+    setOk('');
     try {
-      await patchEmployerProfile({ about: draftAbout });
-      setProfile({ ...profile, about: draftAbout });
+      await patchEmployerProfile({
+        companyName: draft.companyName.trim(),
+        tagline: draft.tagline.trim(),
+        logoUrl: draft.logoUrl.trim(),
+        bannerUrl: draft.bannerUrl.trim(),
+        websiteUrl: draft.websiteUrl.trim(),
+        linkedinUrl: draft.linkedinUrl.trim(),
+        industry: draft.industry.trim(),
+        companySize: Number(draft.companySize || 0),
+        foundedYear: Number(draft.foundedYear || 0),
+        location: draft.location.trim(),
+        fundingStage: draft.fundingStage.trim(),
+        fundingRaised: draft.fundingRaised.trim(),
+        showProfileToEmployees: Boolean(draft.showProfileToEmployees),
+        about: draft.about.trim(),
+        benefits: toBenefits(benefitsText),
+      });
+      setOk('Profile updated successfully.');
       setEditing(false);
+      await load();
     } catch (err: any) {
       setError(err.message || 'Failed to save profile');
+    } finally {
+      setSaving(false);
     }
   };
 
   if (loading) return <div className="dash-card"><p style={{ padding: 16 }}>Loading company profile...</p></div>;
   if (error) return <div className="dash-card"><p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p></div>;
-  if (!profile) return null;
+  if (!profile || !draft) return null;
 
   const initials = profile.companyName.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'CO';
 
@@ -71,6 +111,7 @@ export default function EmployerProfile() {
         <div className="empr-profile-info">
           <h1 className="empr-company-name">{profile.companyName}</h1>
           <p className="empr-company-tagline">{profile.tagline}</p>
+          <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)', marginTop: 8 }}>Company profile visible to employees and candidates.</p>
           <div className="empr-company-meta">
             <span className="empr-company-meta-item">
               <span className="material-symbols-outlined">apartment</span>
@@ -94,13 +135,30 @@ export default function EmployerProfile() {
             </span>
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-            {!editing ? (
-              <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 20px' }} onClick={() => setEditing(true)}>Edit Company</button>
-            ) : (
-              <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 20px' }} onClick={save}>Save</button>
-            )}
             <button className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 20px' }} onClick={load}>Refresh</button>
-            <a className="btn btn-ghost" style={{ fontSize: 13, padding: '8px 20px' }} href="/employer/settings">Company Settings</a>
+            {!editing ? (
+              <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 20px' }} onClick={() => setEditing(true)}>Edit Profile</button>
+            ) : (
+              <>
+                <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 20px' }} onClick={save} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 13, padding: '8px 20px' }}
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft(profile);
+                    setBenefitsText(fromBenefits(profile.benefits || []));
+                    setError('');
+                    setOk('');
+                  }}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+              </>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
             {profile.websiteUrl && (
@@ -117,20 +175,87 @@ export default function EmployerProfile() {
         </div>
       </div>
 
+      {ok && <div className="dash-card"><p style={{ padding: 12, color: 'var(--color-primary-container)' }}>{ok}</p></div>}
+
+      {editing && (
+        <div className="dash-card dash-card-padded">
+          <h2 className="dash-card-title" style={{ marginBottom: 12 }}>Edit Company Profile</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Company Name</span>
+              <input className="glass-input" value={draft.companyName} onChange={(e) => patch({ companyName: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Tagline</span>
+              <input className="glass-input" value={draft.tagline} onChange={(e) => patch({ tagline: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Logo URL</span>
+              <input className="glass-input" value={draft.logoUrl} onChange={(e) => patch({ logoUrl: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Banner URL</span>
+              <input className="glass-input" value={draft.bannerUrl} onChange={(e) => patch({ bannerUrl: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Website URL</span>
+              <input className="glass-input" value={draft.websiteUrl} onChange={(e) => patch({ websiteUrl: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>LinkedIn URL</span>
+              <input className="glass-input" value={draft.linkedinUrl} onChange={(e) => patch({ linkedinUrl: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Industry</span>
+              <input className="glass-input" value={draft.industry} onChange={(e) => patch({ industry: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Company Size</span>
+              <input className="glass-input" inputMode="numeric" value={String(draft.companySize || '')} onChange={(e) => patch({ companySize: Number(e.target.value || 0) })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Founded Year</span>
+              <input className="glass-input" inputMode="numeric" value={String(draft.foundedYear || '')} onChange={(e) => patch({ foundedYear: Number(e.target.value || 0) })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Location</span>
+              <input className="glass-input" value={draft.location} onChange={(e) => patch({ location: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Funding Stage</span>
+              <input className="glass-input" value={draft.fundingStage} onChange={(e) => patch({ fundingStage: e.target.value })} />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Funding Raised</span>
+              <input className="glass-input" value={draft.fundingRaised} onChange={(e) => patch({ fundingRaised: e.target.value })} />
+            </label>
+          </div>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>About</span>
+            <textarea className="glass-input" style={{ minHeight: 110 }} value={draft.about} onChange={(e) => patch({ about: e.target.value })} />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Benefits (one per line)</span>
+            <textarea className="glass-input" style={{ minHeight: 90 }} value={benefitsText} onChange={(e) => setBenefitsText(e.target.value)} />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+            <input
+              type="checkbox"
+              checked={Boolean(draft.showProfileToEmployees)}
+              onChange={(e) => patch({ showProfileToEmployees: e.target.checked })}
+            />
+            <span style={{ fontSize: 13, color: 'var(--color-on-surface)' }}>
+              Show this company profile to employees and candidates
+            </span>
+          </label>
+        </div>
+      )}
+
       {/* About */}
       <div className="dash-card">
         <h2 className="emp-section-title">About {profile.companyName}</h2>
         <div className="dash-card-body">
-          {!editing ? (
-            <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--color-on-surface)' }}>{profile.about}</p>
-          ) : (
-            <textarea
-              className="glass-input"
-              style={{ width: '100%', minHeight: 120 }}
-              value={draftAbout}
-              onChange={(e) => setDraftAbout(e.target.value)}
-            />
-          )}
+          <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--color-on-surface)' }}>{profile.about}</p>
         </div>
       </div>
 
