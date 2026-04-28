@@ -35,6 +35,7 @@ jobs:
             match:
               - '.github/workflows/deploy-backend.yml'
               - 'deploy-full-stack.sh'
+              - 'docker-compose.prod.yml'
               - 'scripts/ci/**'
       - name: Set run_full_stack
         id: set
