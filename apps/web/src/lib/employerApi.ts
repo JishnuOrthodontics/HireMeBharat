@@ -166,6 +166,12 @@ export async function patchEmployerRequisition(requisitionId: string, payload: P
   });
 }
 
+export async function deleteEmployerRequisition(requisitionId: string) {
+  return request<{ ok: boolean }>(`/api/employer/requisitions/${requisitionId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function getEmployerCandidates(params: { stage?: string; requisitionId?: string; limit?: number; offset?: number } = {}) {
   const query = new URLSearchParams();
   if (params.stage) query.set('stage', params.stage);

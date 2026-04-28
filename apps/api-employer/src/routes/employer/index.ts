@@ -312,6 +312,34 @@ export async function employerRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
+  // DELETE /api/employer/requisitions/:id
+  app.delete('/requisitions/:id', async (request, reply) => {
+    const id = (request.params as any)?.id;
+    if (!ObjectId.isValid(id)) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid requisition id' });
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    const reqId = new ObjectId(id);
+    const requisitions = db.collection('employer_requisitions');
+    const requisitionDoc = await requisitions.findOne({ _id: reqId, employerUid: uid });
+    if (!requisitionDoc) return reply.code(404).send({ error: 'Not Found', message: 'Requisition not found' });
+
+    await requisitions.deleteOne({ _id: reqId, employerUid: uid });
+    await Promise.all([
+      db.collection('employer_candidates').deleteMany({ employerUid: uid, requisitionId: id }),
+      db.collection('employer_matches').deleteMany({ employerUid: uid, requisitionId: id }),
+    ]);
+    await db.collection('employer_activity').insertOne({
+      employerUid: uid,
+      icon: 'delete',
+      text: `Requisition deleted: ${requisitionDoc.title || 'Untitled role'}`,
+      createdAt: new Date(),
+    });
+
+    return reply.send({ ok: true });
+  });
+
   // GET /api/employer/candidates
   app.get('/candidates', async (request, reply) => {
     const parsed = candidatesQuerySchema.safeParse(request.query ?? {});

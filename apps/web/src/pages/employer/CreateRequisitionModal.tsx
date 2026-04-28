@@ -1,5 +1,10 @@
-import { useMemo, useState } from 'react';
-import { createEmployerRequisition, type EmployerRequisitionStatus } from '../../lib/employerApi';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  createEmployerRequisition,
+  patchEmployerRequisition,
+  type EmployerRequisitionApi,
+  type EmployerRequisitionStatus,
+} from '../../lib/employerApi';
 
 type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
 
@@ -8,6 +13,7 @@ interface CreateRequisitionModalProps {
   onClose: () => void;
   onCreated: () => Promise<void> | void;
   defaultStatus?: EmployerRequisitionStatus;
+  requisition?: EmployerRequisitionApi | null;
 }
 
 interface FormState {
@@ -63,15 +69,39 @@ export default function CreateRequisitionModal({
   onClose,
   onCreated,
   defaultStatus = 'DRAFT',
+  requisition = null,
 }: CreateRequisitionModalProps) {
   const [form, setForm] = useState<FormState>({ ...initialState, status: defaultStatus });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const isEditMode = Boolean(requisition);
 
   const requirementsPreviewCount = useMemo(
     () => form.requirementsText.split('\n').map((r) => r.trim()).filter(Boolean).length,
     [form.requirementsText]
   );
+
+  useEffect(() => {
+    if (!open) return;
+    if (requisition) {
+      setForm({
+        title: requisition.title || '',
+        department: requisition.department || '',
+        location: requisition.location || '',
+        description: requisition.description || '',
+        employmentType: requisition.employmentType || 'FULL_TIME',
+        salaryMin: String(requisition.salaryMin ?? ''),
+        salaryMax: String(requisition.salaryMax ?? ''),
+        salaryCurrency: requisition.salaryCurrency || 'USD',
+        requirementsText: Array.isArray(requisition.requirements) ? requisition.requirements.join('\n') : '',
+        status: requisition.status || defaultStatus,
+      });
+      setError('');
+      return;
+    }
+    setForm({ ...initialState, status: defaultStatus });
+    setError('');
+  }, [open, requisition, defaultStatus]);
 
   if (!open) return null;
 
@@ -94,7 +124,7 @@ export default function CreateRequisitionModal({
       const salaryMin = form.salaryMin.trim() === '' ? 0 : Number(form.salaryMin);
       const salaryMax = form.salaryMax.trim() === '' ? 0 : Number(form.salaryMax);
 
-      await createEmployerRequisition({
+      const payload = {
         title: form.title.trim(),
         department: form.department.trim(),
         location: form.location.trim(),
@@ -105,13 +135,18 @@ export default function CreateRequisitionModal({
         salaryMax,
         salaryCurrency: form.salaryCurrency.trim().toUpperCase(),
         status: form.status,
-      });
+      };
+      if (requisition) {
+        await patchEmployerRequisition(requisition.id, payload);
+      } else {
+        await createEmployerRequisition(payload);
+      }
 
       await onCreated();
       setForm({ ...initialState, status: defaultStatus });
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Failed to create requisition');
+      setError(err?.message || `Failed to ${isEditMode ? 'update' : 'create'} requisition`);
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +156,7 @@ export default function CreateRequisitionModal({
     <div className="empr-modal-backdrop" onClick={onClose}>
       <div className="empr-modal" onClick={(e) => e.stopPropagation()}>
         <div className="empr-modal-header">
-          <h3>Post New Role</h3>
+          <h3>{isEditMode ? 'Edit Requisition' : 'Post New Role'}</h3>
           <button className="btn btn-ghost" onClick={onClose}>Close</button>
         </div>
 
@@ -194,7 +229,7 @@ export default function CreateRequisitionModal({
         <div className="empr-modal-footer">
           <button className="btn btn-ghost" onClick={onClose} disabled={submitting}>Cancel</button>
           <button className="btn btn-gold" onClick={submit} disabled={submitting}>
-            {submitting ? 'Posting...' : 'Post Role'}
+            {submitting ? (isEditMode ? 'Saving...' : 'Posting...') : (isEditMode ? 'Save Changes' : 'Post Role')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  deleteEmployerRequisition,
   getEmployerRequisitions,
   patchEmployerRequisition,
   type EmployerRequisitionApi,
@@ -24,6 +25,7 @@ export default function EmployerRequisitions() {
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [editingRequisition, setEditingRequisition] = useState<EmployerRequisitionApi | null>(null);
 
   const load = async (tab: ReqTab) => {
     setLoading(true);
@@ -58,6 +60,21 @@ export default function EmployerRequisitions() {
       await load(activeTab);
     } catch (err: any) {
       setError(err.message || 'Failed to update status');
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  const onDelete = async (req: EmployerRequisitionApi) => {
+    const confirmed = window.confirm(`Delete requisition "${req.title}"? This action cannot be undone.`);
+    if (!confirmed) return;
+    setBusyId(req.id + 'DELETE');
+    setError('');
+    try {
+      await deleteEmployerRequisition(req.id);
+      await load(activeTab);
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete requisition');
     } finally {
       setBusyId('');
     }
@@ -129,6 +146,14 @@ export default function EmployerRequisitions() {
                   className="btn btn-ghost"
                   style={{ fontSize: 12, padding: '4px 10px' }}
                   disabled={Boolean(busyId)}
+                  onClick={() => setEditingRequisition(req)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  disabled={Boolean(busyId)}
                   onClick={() => onStatus(req.id, req.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')}
                 >
                   {busyId === req.id + (req.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE')
@@ -144,6 +169,14 @@ export default function EmployerRequisitions() {
                   onClick={() => onStatus(req.id, 'FILLED')}
                 >
                   {busyId === req.id + 'FILLED' ? 'Saving...' : 'Mark Filled'}
+                </button>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 12, padding: '4px 10px', color: 'var(--color-error)' }}
+                  disabled={Boolean(busyId)}
+                  onClick={() => onDelete(req)}
+                >
+                  {busyId === req.id + 'DELETE' ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </div>
@@ -168,6 +201,12 @@ export default function EmployerRequisitions() {
         onClose={() => setCreateOpen(false)}
         onCreated={async () => load(activeTab)}
         defaultStatus={activeTab === 'ALL' ? 'DRAFT' : activeTab}
+      />
+      <CreateRequisitionModal
+        open={Boolean(editingRequisition)}
+        onClose={() => setEditingRequisition(null)}
+        onCreated={async () => load(activeTab)}
+        requisition={editingRequisition}
       />
     </>
   );
