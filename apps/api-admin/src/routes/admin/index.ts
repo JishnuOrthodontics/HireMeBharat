@@ -26,7 +26,6 @@ const escalationsQuerySchema = z.object({
 
 const patchUserSchema = z
   .object({
-    role: userRoleSchema.optional(),
     status: userStatusSchema.optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, {
@@ -275,7 +274,7 @@ export async function adminRoutes(app: FastifyInstance) {
       targetType: 'user',
       targetId: String(before._id),
       before: { role: before.role || 'EMPLOYEE', status: before.status || 'ACTIVE' },
-      after: { role: parsed.data.role || before.role || 'EMPLOYEE', status: parsed.data.status || before.status || 'ACTIVE' },
+      after: { role: before.role || 'EMPLOYEE', status: parsed.data.status || before.status || 'ACTIVE' },
     });
 
     return reply.send({ ok: true });

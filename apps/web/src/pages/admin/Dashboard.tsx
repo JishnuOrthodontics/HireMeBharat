@@ -15,7 +15,6 @@ import {
   type AdminSummaryApi,
   type AdminSystemHealthApi,
   type AdminUserApi,
-  type AdminUserRole,
   type AdminUserStatus,
 } from '../../lib/adminApi';
 import './Admin.css';
@@ -28,7 +27,6 @@ const navItems = [
   { icon: 'analytics', label: 'Analytics', path: '/admin/analytics' },
 ];
 
-const userRoles: Array<AdminUserRole> = ['ADMIN', 'EMPLOYEE', 'EMPLOYER'];
 const userStatuses: Array<AdminUserStatus> = ['ACTIVE', 'SUSPENDED', 'UNDER_REVIEW'];
 const escalationStatuses: Array<AdminEscalationStatus> = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const escalationPriorities: Array<AdminEscalationPriority> = ['LOW', 'MEDIUM', 'HIGH'];
@@ -253,7 +251,6 @@ function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [savingId, setSavingId] = useState('');
-  const [draftRole, setDraftRole] = useState<Record<string, AdminUserRole>>({});
   const [draftStatus, setDraftStatus] = useState<Record<string, AdminUserStatus>>({});
 
   const load = async () => {
@@ -263,13 +260,10 @@ function UsersPage() {
       const res = await getAdminUsers({ limit: 100, offset: 0 });
       setRows(res.users);
       setTotal(res.total);
-      const roleMap: Record<string, AdminUserRole> = {};
       const statusMap: Record<string, AdminUserStatus> = {};
       res.users.forEach((user) => {
-        roleMap[user.id] = user.role;
         statusMap[user.id] = user.status;
       });
-      setDraftRole(roleMap);
       setDraftStatus(statusMap);
     } catch (err: any) {
       setError(err.message || 'Failed to load users');
@@ -283,14 +277,13 @@ function UsersPage() {
   }, []);
 
   const saveUser = async (user: AdminUserApi) => {
-    const role = draftRole[user.id];
     const status = draftStatus[user.id];
-    if (!role || !status) return;
-    if (role === user.role && status === user.status) return;
+    if (!status) return;
+    if (status === user.status) return;
     setSavingId(user.id);
     setError('');
     try {
-      await patchAdminUser(user.id, { role, status });
+      await patchAdminUser(user.id, { status });
       await load();
     } catch (err: any) {
       setError(err.message || 'Failed to update user');
@@ -316,19 +309,10 @@ function UsersPage() {
             </div>
             <div style={{ flex: 1 }}>
               <p className="empr-activity-text" style={{ fontWeight: 600 }}>{user.displayName || user.email}</p>
-              <p className="empr-activity-time">{user.email} · {user.uid || 'no-uid'}</p>
+              <p className="empr-activity-time">
+                {user.email} · {user.uid || 'no-uid'} · {titleCase(user.role)}
+              </p>
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <select
-                  className="glass-input"
-                  value={draftRole[user.id] || user.role}
-                  onChange={(e) => setDraftRole((prev) => ({ ...prev, [user.id]: e.target.value as AdminUserRole }))}
-                >
-                  {userRoles.map((role) => (
-                    <option key={role} value={role}>
-                      {titleCase(role)}
-                    </option>
-                  ))}
-                </select>
                 <select
                   className="glass-input"
                   value={draftStatus[user.id] || user.status}
@@ -340,8 +324,20 @@ function UsersPage() {
                     </option>
                   ))}
                 </select>
-                <button className="btn btn-gold" onClick={() => saveUser(user)} disabled={Boolean(savingId)}>
-                  {savingId === user.id ? 'Saving...' : 'Save'}
+                <button
+                  className="btn btn-gold"
+                  onClick={() =>
+                    setDraftStatus((prev) => ({
+                      ...prev,
+                      [user.id]: (prev[user.id] || user.status) === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED',
+                    }))
+                  }
+                  disabled={Boolean(savingId)}
+                >
+                  {(draftStatus[user.id] || user.status) === 'SUSPENDED' ? 'Restore Access' : 'Revoke Access'}
+                </button>
+                <button className="btn btn-ghost" onClick={() => saveUser(user)} disabled={Boolean(savingId)}>
+                  {savingId === user.id ? 'Saving...' : 'Apply'}
                 </button>
               </div>
             </div>

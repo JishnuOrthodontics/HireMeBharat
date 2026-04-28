@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
+  signOut as firebaseSignOutDirect,
   updateProfile,
   type User,
 } from 'firebase/auth';
@@ -105,7 +106,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = await user.getIdToken();
       const result = await apiGet('/api/public/me', token);
       return result?.profile || result || null;
-    } catch {
+    } catch (err: any) {
+      const msg = String(err?.message || '');
+      if (msg.toLowerCase().includes('account has been revoked') || msg.includes('ACCOUNT_REVOKED')) {
+        throw new Error('Your account has been revoked. Please contact admin.');
+      }
       return null;
     }
   }, []);
@@ -139,7 +144,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     patch({ loading: true, error: null });
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
-      const profile = await fetchProfile(cred.user);
+      let profile: UserProfile | null = null;
+      try {
+        profile = await fetchProfile(cred.user);
+      } catch (err: any) {
+        const msg = String(err?.message || '');
+        if (msg.toLowerCase().includes('account has been revoked') || msg.includes('ACCOUNT_REVOKED')) {
+          await firebaseSignOutDirect(auth);
+          throw new Error('Your account has been revoked. Please contact admin.');
+        }
+        throw err;
+      }
       if (!profile) {
         // Firebase user exists but backend profile is missing; send user to role selection
         // so we can create the app profile via /api/public/register.

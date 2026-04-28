@@ -137,6 +137,13 @@ export async function publicRoutes(app: FastifyInstance) {
         if (!userDoc) {
           return reply.code(404).send({ error: 'Not Found', message: 'User profile not found' });
         }
+        if (String(userDoc.status || '').toUpperCase() === 'SUSPENDED') {
+          return reply.code(403).send({
+            error: 'Forbidden',
+            message: 'Your account has been revoked. Please contact admin.',
+            code: 'ACCOUNT_REVOKED',
+          });
+        }
         return reply.send({
           profile: {
             uid: userDoc.uid,

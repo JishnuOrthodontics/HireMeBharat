@@ -105,6 +105,14 @@ export async function registerAuthPlugin(app: FastifyInstance) {
             ],
           });
           if (userDoc) {
+            const userStatus = String(userDoc.status || 'ACTIVE').toUpperCase();
+            if (userStatus === 'SUSPENDED') {
+              return reply.code(403).send({
+                error: 'Forbidden',
+                message: 'Your account has been revoked. Please contact admin.',
+                code: 'ACCOUNT_REVOKED',
+              });
+            }
             dbRole = String(userDoc.role || '').toUpperCase();
           }
         }

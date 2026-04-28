@@ -109,7 +109,7 @@ export async function getAdminUsers(params: {
   return request<{ users: AdminUserApi[]; total: number; limit: number; offset: number }>(`/api/admin/users${suffix}`);
 }
 
-export async function patchAdminUser(userId: string, payload: { role?: AdminUserRole; status?: AdminUserStatus }) {
+export async function patchAdminUser(userId: string, payload: { status?: AdminUserStatus }) {
   return request<{ ok: boolean }>(`/api/admin/users/${userId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
