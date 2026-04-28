@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import { config } from 'dotenv';
 import httpProxy from '@fastify/http-proxy';
 import {
+  registerMongoPlugin,
   registerAuthPlugin,
   registerRbacPlugin,
   getBearerAuthorizationHeader,
@@ -47,6 +48,7 @@ async function buildApp() {
     allowedHeaders: ['Authorization', 'Content-Type', 'X-Firebase-Authorization'],
   });
 
+  await registerMongoPlugin(app);
   // Register directly on this app instance so preValidation closures
   // can always access app.authenticate/app.requireRole at runtime.
   await registerAuthPlugin(app);
