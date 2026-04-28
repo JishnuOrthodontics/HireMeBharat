@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
-  createEmployerRequisition,
   getEmployerRequisitions,
   patchEmployerRequisition,
   type EmployerRequisitionApi,
 } from '../../lib/employerApi';
+import CreateRequisitionModal from './CreateRequisitionModal';
 
 const tabs = ['ALL', 'ACTIVE', 'PAUSED', 'FILLED', 'DRAFT'] as const;
 type ReqTab = typeof tabs[number];
@@ -14,12 +15,15 @@ function titleCase(value: string) {
 }
 
 export default function EmployerRequisitions() {
-  const [activeTab, setActiveTab] = useState<ReqTab>('ALL');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = (searchParams.get('status') || 'ALL').toUpperCase();
+  const [activeTab, setActiveTab] = useState<ReqTab>((tabs.includes(initialStatus as ReqTab) ? initialStatus : 'ALL') as ReqTab);
   const [rows, setRows] = useState<EmployerRequisitionApi[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = async (tab: ReqTab) => {
     setLoading(true);
@@ -39,28 +43,12 @@ export default function EmployerRequisitions() {
     load(activeTab);
   }, [activeTab]);
 
-  const onCreate = async () => {
-    setBusyId('create');
-    setError('');
-    try {
-      await createEmployerRequisition({
-        title: 'New Requisition',
-        department: 'General',
-        location: 'Remote',
-        description: 'Add detailed role description here.',
-        requirements: [],
-        salaryMin: 0,
-        salaryMax: 0,
-        salaryCurrency: 'USD',
-        status: 'DRAFT',
-      });
-      await load(activeTab);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create requisition');
-    } finally {
-      setBusyId('');
+  useEffect(() => {
+    const q = (searchParams.get('status') || '').toUpperCase();
+    if (q && tabs.includes(q as ReqTab) && q !== activeTab) {
+      setActiveTab(q as ReqTab);
     }
-  };
+  }, [searchParams, activeTab]);
 
   const onStatus = async (id: string, status: EmployerRequisitionApi['status']) => {
     setBusyId(id + status);
@@ -80,9 +68,9 @@ export default function EmployerRequisitions() {
       <div className="dash-card">
         <div className="dash-card-header">
           <span className="dash-card-title">Requisitions</span>
-          <button className="btn btn-gold" style={{ fontSize: 13, padding: '6px 16px' }} onClick={onCreate} disabled={busyId === 'create'}>
+          <button className="btn btn-gold" style={{ fontSize: 13, padding: '6px 16px' }} onClick={() => setCreateOpen(true)}>
             <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
-            {busyId === 'create' ? 'Creating...' : 'New Requisition'}
+            New Requisition
           </button>
         </div>
 
@@ -91,7 +79,14 @@ export default function EmployerRequisitions() {
             <button
               key={tab}
               className={`empr-filter-tab ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                if (tab === 'ALL') {
+                  setSearchParams({});
+                } else {
+                  setSearchParams({ status: tab });
+                }
+              }}
             >
               {titleCase(tab)}
             </button>
@@ -168,6 +163,12 @@ export default function EmployerRequisitions() {
           </div>
         )}
       </div>
+      <CreateRequisitionModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={async () => load(activeTab)}
+        defaultStatus={activeTab === 'ALL' ? 'DRAFT' : activeTab}
+      />
     </>
   );
 }

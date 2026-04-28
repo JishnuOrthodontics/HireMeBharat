@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  createEmployerRequisition,
   getEmployerActivity,
   getEmployerDashboardSummary,
   getEmployerMatches,
   type EmployerActivityApi,
   type EmployerMatchApi,
 } from '../../lib/employerApi';
+import CreateRequisitionModal from './CreateRequisitionModal';
 
 export default function EmployerFeed() {
   const [matches, setMatches] = useState<EmployerMatchApi[]>([]);
@@ -14,7 +14,7 @@ export default function EmployerFeed() {
   const [summary, setSummary] = useState<{ inPipeline: number; upcomingInterviews: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [posting, setPosting] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -44,39 +44,16 @@ export default function EmployerFeed() {
     return `${summary.inPipeline} candidates are currently in your pipeline and ${summary.upcomingInterviews} interviews are upcoming.`;
   }, [summary]);
 
-  const onPost = async () => {
-    setPosting(true);
-    setError('');
-    try {
-      await createEmployerRequisition({
-        title: 'New Role',
-        department: 'General',
-        location: 'Remote',
-        description: 'Add role details here.',
-        requirements: [],
-        salaryMin: 0,
-        salaryMax: 0,
-        salaryCurrency: 'USD',
-        status: 'DRAFT',
-      });
-      await load();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create requisition');
-    } finally {
-      setPosting(false);
-    }
-  };
-
   return (
     <>
       {/* Post a Job */}
       <div className="dash-card">
         <div className="empr-post-job-card">
           <div className="dash-profile-avatar-placeholder" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)', color: '#1a1a2e', width: 40, height: 40, fontSize: 14 }}>TV</div>
-          <div className="empr-post-job-input">Post a new requisition...</div>
-          <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 16px' }} onClick={onPost} disabled={posting}>
+          <button className="empr-post-job-input" onClick={() => setCreateOpen(true)}>Post a new requisition...</button>
+          <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 16px' }} onClick={() => setCreateOpen(true)}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
-            {posting ? 'Posting...' : 'Post'}
+            Post
           </button>
         </div>
       </div>
@@ -155,6 +132,11 @@ export default function EmployerFeed() {
           <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>No activity yet.</p>
         )}
       </div>
+      <CreateRequisitionModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={load}
+      />
     </>
   );
 }
