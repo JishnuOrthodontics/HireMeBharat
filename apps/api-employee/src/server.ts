@@ -26,8 +26,10 @@ async function buildApp() {
   });
 
   await registerMongoPlugin(app);
-  await app.register(registerAuthPlugin);
-  await app.register(registerRbacPlugin);
+  // Register directly on this app instance so decorators are available
+  // to employeeRoutes in the same scope.
+  await registerAuthPlugin(app);
+  await registerRbacPlugin(app);
 
   // --- Routes ---
   // Employee routes (require auth + EMPLOYEE role)
