@@ -11,9 +11,11 @@ export const API_PATHS = {
   },
   // Admin only
   ADMIN: {
+    SUMMARY: '/api/admin/summary',
     ESCALATIONS: '/api/admin/escalations',
     USERS: '/api/admin/users',
     ANALYTICS: '/api/admin/analytics',
+    SYSTEM_HEALTH: '/api/admin/system-health',
   },
   // Employee only
   EMPLOYEE: {

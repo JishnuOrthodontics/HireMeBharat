@@ -158,6 +158,66 @@ export interface Escalation {
   updatedAt: Date;
 }
 
+export type AdminUserStatus = 'ACTIVE' | 'SUSPENDED' | 'UNDER_REVIEW';
+export type AdminEscalationStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
+export type AdminEscalationPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type AdminHealthStatus = 'HEALTHY' | 'WARNING' | 'DOWN';
+
+export interface AdminSummary {
+  window: '24h' | '7d' | '30d';
+  totalUsers: number;
+  usersByRole: Record<UserRole, number>;
+  usersLast24h: number;
+  activeRequisitions: number;
+  escalationsOpen: number;
+  escalationsInProgress: number;
+  matchesLast24h: number;
+}
+
+export interface AdminUserListItem {
+  id: string;
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  status: AdminUserStatus;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface AdminEscalationItem {
+  id: string;
+  type: Escalation['type'];
+  status: AdminEscalationStatus;
+  priority: AdminEscalationPriority;
+  summary: string;
+  entityType: string;
+  entityId: string;
+  assignedToUid: string;
+  notes: string;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface AdminSystemHealthItem {
+  component: string;
+  status: AdminHealthStatus;
+  message: string;
+  checkedAt?: string | null;
+}
+
+export interface AdminPatchUserPayload {
+  role?: UserRole;
+  status?: AdminUserStatus;
+}
+
+export interface AdminPatchEscalationPayload {
+  status?: AdminEscalationStatus;
+  priority?: AdminEscalationPriority;
+  assignedToUid?: string;
+  notes?: string;
+}
+
 export interface Notification {
   _id?: string;
   userUid: string;
