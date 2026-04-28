@@ -1,0 +1,55 @@
+name: Bootstrap Admin User
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_email:
+        description: Admin email to upsert/promote
+        required: true
+        type: string
+      admin_display_name:
+        description: Optional display name
+        required: false
+        default: Admin
+        type: string
+      create_if_missing:
+        description: Create Firebase user if not found
+        required: false
+        default: true
+        type: boolean
+      admin_temp_password:
+        description: Required only if create_if_missing=true and user doesn't exist
+        required: false
+        type: string
+
+jobs:
+  bootstrap-admin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bootstrap admin in Firebase + MongoDB
+        env:
+          ADMIN_EMAIL: ${{ inputs.admin_email }}
+          ADMIN_DISPLAY_NAME: ${{ inputs.admin_display_name }}
+          CREATE_IF_MISSING: ${{ inputs.create_if_missing }}
+          ADMIN_TEMP_PASSWORD: ${{ inputs.admin_temp_password }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DB: hiremebharat
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+        run: node scripts/admin/bootstrap-admin.cjs
+

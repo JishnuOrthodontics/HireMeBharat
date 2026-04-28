@@ -44,7 +44,7 @@ Each microservice and the frontend requires specific environment variables.
 ### Backend Services (apps/api-*)
 Most services require:
 - `MONGODB_URI`: MongoDB Atlas Connection String
-- `FIREBASE_PROJECT_ID`: hiremeapp2026
+- `FIREBASE_PROJECT_ID`: `hiremeapp2026-72a87` (must match frontend Firebase project)
 - `PORT`: Service-specific port (3001-3005)
 
 ### Frontend (apps/web/.env)
@@ -166,6 +166,12 @@ Runs when **`run_full_stack == true`** (manual run or infra-only push).
 
 Production API base (via Cloudflare → Nginx on VM → gateway): **`https://api.hiremebharat.com`**.
 
+#### CI/.env note for Firebase private key
+
+Production deploy writes VM `.env` using [`scripts/ci/write-env-prod.cjs`](scripts/ci/write-env-prod.cjs) (instead of shell `echo`) so long PEM secrets such as `FIREBASE_PRIVATE_KEY` are preserved correctly.
+
+In production compose, backend services load secrets through `env_file: .env` to avoid `${VAR}` interpolation edge cases with multiline keys.
+
 #### Backend-related secrets (reference)
 
 | Secret | Role |
@@ -195,6 +201,8 @@ PUBLIC_API_URL=https://api.hiremebharat.com bash scripts/ci/verify-public-api.sh
 2. **Backend profile** — After sign-up, the app calls **`POST /api/public/register`** on the API gateway with **`Authorization: Bearer <idToken>`** and body `{ displayName, role }` (`EMPLOYEE` or `EMPLOYER`). **`GET /api/public/me`** returns the MongoDB profile using the same token.
 3. **Gateway** (`api-gateway`) validates JWTs and proxies **`/api/public/*`** to **`api-auth`**.
 
+If a Firebase Auth user already exists but no MongoDB profile exists, the frontend now routes that user to **`/role-select`** and completes profile creation via **`POST /api/public/register`** (instead of blocking sign-in with "No account profile found").
+
 Public, no-auth health and landing stats:
 
 - **`GET /api/health`** — Gateway liveness (also used by CI).
@@ -203,4 +211,22 @@ Public, no-auth health and landing stats:
 Ensure **Firebase Console → Authentication → Settings → Authorized domains** includes **`hiremebharat.com`** (and **`localhost`** for dev).
 
 The GitHub/backend secret **`FIREBASE_PROJECT_ID`** must be the **same Firebase project ID** as the frontend (`**VITE_FIREBASE_PROJECT_ID**` / Firebase console), for example **`hiremeapp2026-72a87`**. If it differs from the project that mints ID tokens (e.g. **`hiremeapp2026`** vs **`hiremeapp2026-72a87`**), **`verifyIdToken`** fails and **`/api/public/register`** returns **401 Invalid token**.
+
+Also ensure `api-auth` routes and auth middleware use the same initialized Firebase Admin instance (via `@hiremebharat/backend-core`) to avoid `The default Firebase app does not exist` during token verification.
+
+## 👑 Admin bootstrap (no public registration)
+
+Admins are not created via the public register flow. Use workflow **Bootstrap Admin User** (`.github/workflows/bootstrap-admin.yml`) with `workflow_dispatch`.
+
+- Input `admin_email` (required): user to promote.
+- Input `create_if_missing` (default `true`): create Firebase user if absent.
+- Input `admin_temp_password`: required only when creating a new Firebase user.
+
+The workflow runs `scripts/admin/bootstrap-admin.cjs` and:
+
+1. Finds (or creates) the Firebase Auth user.
+2. Upserts MongoDB profile in `hiremebharat.users` with role `ADMIN`.
+3. Sets Firebase custom claims `{ role: "ADMIN" }`.
+
+No admin credentials are committed in code; secrets come from GitHub Actions secrets.
 
