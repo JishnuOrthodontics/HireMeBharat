@@ -46,6 +46,7 @@ async function buildApp() {
     origin: [frontendOrigin, 'https://hiremebharat.com', 'https://www.hiremebharat.com', 'http://localhost:5173'],
     credentials: true,
     allowedHeaders: ['Authorization', 'Content-Type', 'X-Firebase-Authorization'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   await registerMongoPlugin(app);
