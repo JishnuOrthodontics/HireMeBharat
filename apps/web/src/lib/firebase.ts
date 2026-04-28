@@ -18,3 +18,4 @@ export const googleProvider = new GoogleAuthProvider();
 // Request additional scopes for Google sign-in
 googleProvider.addScope('profile');
 googleProvider.addScope('email');
+

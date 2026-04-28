@@ -32,3 +32,4 @@ export async function registerRbacPlugin(app: FastifyInstance) {
 
   app.decorate('requireRole', requireRole);
 }
+

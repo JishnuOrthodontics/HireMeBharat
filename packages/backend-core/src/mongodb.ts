@@ -29,3 +29,4 @@ export async function registerMongoPlugin(app: FastifyInstance) {
     app.decorate('mongo', { client, db });
   }
 }
+

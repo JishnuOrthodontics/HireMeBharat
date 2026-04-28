@@ -15,3 +15,4 @@ echo "Disk space status:"
 df -h | grep '^/dev/'
 
 echo "Cleanup complete."
+

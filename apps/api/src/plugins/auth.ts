@@ -21,7 +21,7 @@ let firebaseInitialized = false;
 function initFirebase() {
   if (firebaseInitialized) return;
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || 'hiremeapp-d2496';
+  const projectId = process.env.FIREBASE_PROJECT_ID || 'hiremeapp2026';
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
   if (privateKey) {
@@ -111,3 +111,4 @@ export async function registerAuthPlugin(app: FastifyInstance) {
 
   app.decorate('authenticate', authenticate);
 }
+
