@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import EmployeeFeed from './EmployeeFeed';
@@ -56,30 +56,80 @@ function LeftSidebar({ profile, activeMatches, interviews }: { profile: any; act
       {/* Quick Links */}
       <div className="dash-card">
         <div className="dash-quick-links">
-          <a href="#" className="dash-quick-link">
+          <Link to="/employee/matches?status=SAVED" className="dash-quick-link">
             <span className="material-symbols-outlined">bookmark</span>
             Saved Roles
             <span className="dash-quick-link-badge">7</span>
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employee/market-insights" className="dash-quick-link">
             <span className="material-symbols-outlined">trending_up</span>
             Market Insights
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employee/skill-assessments" className="dash-quick-link">
             <span className="material-symbols-outlined">school</span>
             Skill Assessments
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employee/resume" className="dash-quick-link">
             <span className="material-symbols-outlined">description</span>
             My Resume
-          </a>
-          <a href="#" className="dash-quick-link">
+          </Link>
+          <Link to="/employee/settings" className="dash-quick-link">
             <span className="material-symbols-outlined">settings</span>
             Preferences
-          </a>
+          </Link>
         </div>
       </div>
     </>
+  );
+}
+
+function EmployeeMarketInsights() {
+  return (
+    <div className="dash-card dash-card-padded">
+      <h2 className="dash-card-title">Market Insights</h2>
+      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
+        Weekly market intelligence is shown on your Home feed. We will add deeper skill and salary trend analytics here.
+      </p>
+      <Link to="/employee" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex' }}>
+        Back to Home
+      </Link>
+    </div>
+  );
+}
+
+function EmployeeSkillAssessments() {
+  return (
+    <div className="dash-card dash-card-padded">
+      <h2 className="dash-card-title">Skill Assessments</h2>
+      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
+        Assessments are not enabled yet for your account. This section is ready and will show available tests once enabled.
+      </p>
+    </div>
+  );
+}
+
+function EmployeeResume() {
+  return (
+    <div className="dash-card dash-card-padded">
+      <h2 className="dash-card-title">My Resume</h2>
+      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
+        Resume tools are being rolled out. For now, update your profile headline/experience in Profile to improve matching.
+      </p>
+      <Link to="/employee/profile" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex' }}>
+        Open Profile
+      </Link>
+    </div>
+  );
+}
+
+function EmployeeSettings() {
+  return (
+    <div className="dash-card dash-card-padded">
+      <h2 className="dash-card-title">Preferences</h2>
+      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
+        Preference settings page is now connected. Profile and notification preferences will be added here.
+      </p>
+    </div>
   );
 }
 
@@ -251,6 +301,10 @@ export default function Dashboard() {
         <Route path="concierge" element={<EmployeeConcierge />} />
         <Route path="network" element={<EmployeeNetwork />} />
         <Route path="profile" element={<EmployeeProfile />} />
+        <Route path="market-insights" element={<EmployeeMarketInsights />} />
+        <Route path="skill-assessments" element={<EmployeeSkillAssessments />} />
+        <Route path="resume" element={<EmployeeResume />} />
+        <Route path="settings" element={<EmployeeSettings />} />
         <Route path="*" element={<EmployeeFeed />} />
       </Routes>
     </DashboardLayout>

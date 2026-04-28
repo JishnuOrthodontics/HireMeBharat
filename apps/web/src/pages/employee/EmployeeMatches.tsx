@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getEmployeeMatches, type EmployeeMatchApi, updateMatchStatus } from '../../lib/employeeApi';
 
 const tabs = ['ALL', 'NEW', 'APPLIED', 'INTERVIEW', 'SAVED', 'DECLINED'] as const;
@@ -9,7 +10,11 @@ function statusChip(status: string) {
 }
 
 export default function EmployeeMatches() {
-  const [activeTab, setActiveTab] = useState<MatchTab>('ALL');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStatus = (searchParams.get('status') || 'ALL').toUpperCase();
+  const [activeTab, setActiveTab] = useState<MatchTab>(
+    (tabs.includes(initialStatus as MatchTab) ? initialStatus : 'ALL') as MatchTab
+  );
   const [matches, setMatches] = useState<EmployeeMatchApi[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -29,6 +34,13 @@ export default function EmployeeMatches() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const q = (searchParams.get('status') || '').toUpperCase();
+    if (q && tabs.includes(q as MatchTab) && q !== activeTab) {
+      setActiveTab(q as MatchTab);
+    }
+  }, [searchParams, activeTab]);
 
   useEffect(() => {
     load(activeTab);
@@ -59,7 +71,14 @@ export default function EmployeeMatches() {
           <button
             key={tab}
             className={`emp-filter-tab ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              if (tab === 'ALL') {
+                setSearchParams({});
+              } else {
+                setSearchParams({ status: tab });
+              }
+            }}
           >
             {statusChip(tab)}
           </button>
