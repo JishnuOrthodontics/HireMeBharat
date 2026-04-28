@@ -47,8 +47,10 @@ async function buildApp() {
     allowedHeaders: ['Authorization', 'Content-Type', 'X-Firebase-Authorization'],
   });
 
-  await app.register(registerAuthPlugin);
-  await app.register(registerRbacPlugin);
+  // Register directly on this app instance so preValidation closures
+  // can always access app.authenticate/app.requireRole at runtime.
+  await registerAuthPlugin(app);
+  await registerRbacPlugin(app);
 
   // --- HTTP Proxy to microservices ---
   // Public routes (no auth required) -> api-auth
