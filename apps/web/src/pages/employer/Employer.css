@@ -276,6 +276,41 @@
   left: 24px;
 }
 
+.empr-edit-overlay-btn {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(18, 18, 26, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.empr-edit-overlay-btn:hover {
+  transform: scale(1.03);
+  background: rgba(18, 18, 26, 0.95);
+}
+
+.empr-edit-overlay-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.empr-edit-overlay-btn.banner {
+  top: 12px;
+  right: 12px;
+}
+
+.empr-edit-overlay-btn.logo {
+  bottom: -30px;
+  left: 98px;
+  z-index: 2;
+}
+
 .empr-profile-info {
   padding: 52px 24px 16px;
 }

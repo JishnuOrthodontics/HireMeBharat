@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getEmployerProfile, getEmployerRequisitions, patchEmployerProfile, type EmployerProfileApi, type EmployerRequisitionApi } from '../../lib/employerApi';
 
 function toBenefits(text: string) {
@@ -22,6 +22,8 @@ export default function EmployerProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
+  const bannerInputRef = useRef<HTMLInputElement | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -83,11 +85,39 @@ export default function EmployerProfile() {
     }
   };
 
+  const readFileAsDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('Failed to read selected image'));
+      reader.readAsDataURL(file);
+    });
+
+  const onPickLogoFile = async (file?: File) => {
+    if (!file) return;
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      patch({ logoUrl: dataUrl });
+    } catch (err: any) {
+      setError(err.message || 'Unable to load logo image');
+    }
+  };
+
+  const onPickBannerFile = async (file?: File) => {
+    if (!file) return;
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      patch({ bannerUrl: dataUrl });
+    } catch (err: any) {
+      setError(err.message || 'Unable to load banner image');
+    }
+  };
+
   if (loading) return <div className="dash-card"><p style={{ padding: 16 }}>Loading company profile...</p></div>;
   if (error) return <div className="dash-card"><p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p></div>;
   if (!profile || !draft) return null;
 
-  const initials = profile.companyName.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'CO';
+  const initials = (draft.companyName || profile.companyName).split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase() || 'CO';
 
   return (
     <>
@@ -95,17 +125,51 @@ export default function EmployerProfile() {
       <div className="dash-card">
         <div
           className="empr-profile-banner"
-          style={profile.bannerUrl ? { backgroundImage: `url(${profile.bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+          style={draft.bannerUrl ? { backgroundImage: `url(${draft.bannerUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
         >
-          {profile.logoUrl ? (
+          {draft.logoUrl ? (
             <img
-              src={profile.logoUrl}
-              alt={profile.companyName}
+              src={draft.logoUrl}
+              alt={draft.companyName}
               className="empr-profile-logo"
               style={{ objectFit: 'cover' }}
             />
           ) : (
             <div className="empr-profile-logo">{initials}</div>
+          )}
+          {editing && (
+            <>
+              <button
+                type="button"
+                className="empr-edit-overlay-btn banner"
+                onClick={() => bannerInputRef.current?.click()}
+                title="Update banner image"
+              >
+                <span className="material-symbols-outlined">edit</span>
+              </button>
+              <button
+                type="button"
+                className="empr-edit-overlay-btn logo"
+                onClick={() => logoInputRef.current?.click()}
+                title="Update profile logo"
+              >
+                <span className="material-symbols-outlined">edit</span>
+              </button>
+              <input
+                ref={bannerInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={(e) => onPickBannerFile(e.target.files?.[0])}
+              />
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                style={{ display: 'none' }}
+                onChange={(e) => onPickLogoFile(e.target.files?.[0])}
+              />
+            </>
           )}
         </div>
         <div className="empr-profile-info">
