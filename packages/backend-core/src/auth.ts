@@ -92,16 +92,26 @@ export async function registerAuthPlugin(app: FastifyInstance) {
       try {
         const decodedToken = await admin.auth().verifyIdToken(token);
 
-        // Look up the user's role from MongoDB
+        // Look up the user's role from MongoDB (supports legacy firebaseUid docs).
         const db = (app as any).mongo?.db;
-        let role = 'EMPLOYEE';
+        let dbRole = '';
 
         if (db) {
-          const userDoc = await db.collection('users').findOne({ uid: decodedToken.uid });
+          const userDoc = await db.collection('users').findOne({
+            $or: [
+              { uid: decodedToken.uid },
+              { firebaseUid: decodedToken.uid },
+              ...(decodedToken.email ? [{ email: decodedToken.email }] : []),
+            ],
+          });
           if (userDoc) {
-            role = userDoc.role;
+            dbRole = String(userDoc.role || '').toUpperCase();
           }
         }
+
+        // Fallback to Firebase custom claims role if DB role isn't present.
+        const claimRole = (decodedToken as any).role ? String((decodedToken as any).role).toUpperCase() : '';
+        const role = dbRole || claimRole || 'EMPLOYEE';
 
         request.user = {
           uid: decodedToken.uid,

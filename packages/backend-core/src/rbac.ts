@@ -13,14 +13,15 @@ export async function registerRbacPlugin(app: FastifyInstance) {
         });
       }
 
-      const userRole = request.user.role;
-      if (!roles.includes(userRole)) {
+      const userRole = String(request.user.role || '').toUpperCase();
+      const allowedRoles = roles.map((r) => String(r).toUpperCase());
+      if (!allowedRoles.includes(userRole)) {
         app.log.warn(
-          `Access denied: user ${request.user.uid} with role ${userRole} attempted to access route requiring ${roles.join(', ')}`
+          `Access denied: user ${request.user.uid} with role ${userRole} attempted to access route requiring ${allowedRoles.join(', ')}`
         );
         return reply.code(403).send({
           error: 'Forbidden',
-          message: `Access denied. Required role(s): ${roles.join(', ')}`,
+          message: `Access denied. Required role(s): ${allowedRoles.join(', ')}`,
         });
       }
     };
@@ -28,3 +29,4 @@ export async function registerRbacPlugin(app: FastifyInstance) {
 
   app.decorate('requireRole', requireRole);
 }
+
