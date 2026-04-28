@@ -127,3 +127,12 @@ export async function registerAuthPlugin(app: FastifyInstance) {
   app.decorate('authenticate', authenticate);
 }
 
+/**
+ * Shared Firebase Admin accessor.
+ * Ensures all services/routes use the same initialized firebase-admin instance.
+ */
+export function getFirebaseAdmin() {
+  initFirebase();
+  return admin;
+}
+

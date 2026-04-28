@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import admin from 'firebase-admin';
-import { getBearerAuthorizationHeader } from '@hiremebharat/backend-core';
+import { getBearerAuthorizationHeader, getFirebaseAdmin } from '@hiremebharat/backend-core';
 
 export async function publicRoutes(app: FastifyInstance) {
+  const firebaseAdmin = getFirebaseAdmin();
   const classifyVerifyError = (msg: string) => {
     const m = msg.toLowerCase();
     if (m.includes('audience') || m.includes('aud claim') || m.includes('issuer') || m.includes('iss claim')) return 'project-mismatch';
@@ -18,7 +18,7 @@ export async function publicRoutes(app: FastifyInstance) {
     if (!authHeader?.startsWith('Bearer ')) return null;
     const token = authHeader.slice(7);
     try {
-      return await admin.auth().verifyIdToken(token);
+      return await firebaseAdmin.auth().verifyIdToken(token);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       (request as any).verifyTokenReason = classifyVerifyError(msg);
@@ -84,7 +84,7 @@ export async function publicRoutes(app: FastifyInstance) {
 
         // Set Firebase custom claims for role
         try {
-          await admin.auth().setCustomUserClaims(decoded.uid, { role });
+          await firebaseAdmin.auth().setCustomUserClaims(decoded.uid, { role });
         } catch (claimErr) {
           app.log.warn({ err: claimErr }, 'Failed to set custom claims');
         }
