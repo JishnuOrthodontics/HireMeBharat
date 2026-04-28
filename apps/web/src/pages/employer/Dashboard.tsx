@@ -1,11 +1,10 @@
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import EmployerFeed from './EmployerFeed';
 import EmployerRequisitions from './EmployerRequisitions';
 import EmployerCandidates from './EmployerCandidates';
 import EmployerProfile from './EmployerProfile';
-import EmployerSettings from './EmployerSettings';
 import {
   getEmployerDashboardSummary,
   getEmployerProfile,
@@ -245,7 +244,7 @@ export default function Dashboard() {
         <Route path="messages" element={<ComingSoon title="Messages" />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="profile" element={<EmployerProfile />} />
-        <Route path="settings" element={<EmployerSettings />} />
+        <Route path="settings" element={<Navigate to="/employer/profile" replace />} />
         <Route path="*" element={<EmployerFeed />} />
       </Routes>
     </DashboardLayout>

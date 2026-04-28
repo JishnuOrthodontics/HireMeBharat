@@ -46,6 +46,8 @@ export default function DashboardLayout({
     .join('')
     .toUpperCase()
     .slice(0, 2) || '?';
+  const settingsPath = role === 'employer' ? '/employer/profile' : `/${role}/settings`;
+  const settingsLabel = role === 'employer' ? 'Edit Profile' : 'Settings';
 
   return (
     <div className="dashboard">
@@ -126,9 +128,9 @@ export default function DashboardLayout({
                       <span className="material-symbols-outlined">person</span>
                       View Profile
                     </Link>
-                    <Link to={`/${role}/settings`} className="dash-dropdown-item" onClick={() => setProfileMenuOpen(false)}>
+                    <Link to={settingsPath} className="dash-dropdown-item" onClick={() => setProfileMenuOpen(false)}>
                       <span className="material-symbols-outlined">settings</span>
-                      Settings
+                      {settingsLabel}
                     </Link>
                     <div className="dash-dropdown-divider" />
                     <button className="dash-dropdown-item" onClick={async () => {
