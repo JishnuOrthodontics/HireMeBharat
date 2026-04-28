@@ -16,6 +16,10 @@ services:
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
       - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
       - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - UPSTREAM_AUTH=http://api-auth:3002
+      - UPSTREAM_EMPLOYEE=http://api-employee:3003
+      - UPSTREAM_EMPLOYER=http://api-employer:3004
+      - UPSTREAM_ADMIN=http://api-admin:3005
     restart: unless-stopped
 
   # Auth Service (handles public routes)
@@ -95,13 +99,4 @@ services:
         htpasswd -Bbn $REGISTRY_USER $REGISTRY_PASSWORD > /auth/htpasswd &&
         exec /etc/docker/registry/config.yml
     restart: unless-stopped
-
-  # Cloudflare Tunnel
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run
-    environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
-
 

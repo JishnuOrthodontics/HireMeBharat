@@ -12,6 +12,7 @@ on:
       - 'packages/backend-core/**'
       - '.github/workflows/deploy-backend.yml'
       - 'deploy-full-stack.sh'
+      - 'docker-compose.prod.yml'
   workflow_dispatch:
 
 jobs:

@@ -15,7 +15,11 @@ services:
       - FRONTEND_URL=http://localhost:5173
       - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=hiremeapp2026
+      - UPSTREAM_AUTH=http://api-auth:3002
+      - UPSTREAM_EMPLOYEE=http://api-employee:3003
+      - UPSTREAM_EMPLOYER=http://api-employer:3004
+      - UPSTREAM_ADMIN=http://api-admin:3005
     depends_on:
       - api-auth
       - api-employee
@@ -36,7 +40,7 @@ services:
       - FRONTEND_URL=http://localhost:5173
       - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=hiremeapp2026
 
   # Employee Service
   api-employee:
@@ -52,7 +56,7 @@ services:
       - FRONTEND_URL=http://localhost:5173
       - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=hiremeapp2026
 
   # Employer Service
   api-employer:
@@ -68,7 +72,7 @@ services:
       - FRONTEND_URL=http://localhost:5173
       - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=hiremeapp2026
 
   # Admin Service
   api-admin:
@@ -84,7 +88,7 @@ services:
       - FRONTEND_URL=http://localhost:5173
       - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
       - MONGODB_DB=hiremebharat
-      - FIREBASE_PROJECT_ID=hiremeapp-d2496
+      - FIREBASE_PROJECT_ID=hiremeapp2026
 
   # Local Docker Registry (for GCP deployment)
   registry:

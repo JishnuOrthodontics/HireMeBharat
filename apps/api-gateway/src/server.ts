@@ -10,6 +10,12 @@ config();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 
+/** Sibling microservices (Docker Compose: http://api-auth:3002, …). Defaults suit local processes on loopback. */
+const UPSTREAM_AUTH = process.env.UPSTREAM_AUTH ?? 'http://127.0.0.1:3002';
+const UPSTREAM_EMPLOYEE = process.env.UPSTREAM_EMPLOYEE ?? 'http://127.0.0.1:3003';
+const UPSTREAM_EMPLOYER = process.env.UPSTREAM_EMPLOYER ?? 'http://127.0.0.1:3004';
+const UPSTREAM_ADMIN = process.env.UPSTREAM_ADMIN ?? 'http://127.0.0.1:3005';
+
 async function buildApp() {
   const app = Fastify({
     logger: {
@@ -32,14 +38,14 @@ async function buildApp() {
   // --- HTTP Proxy to microservices ---
   // Public routes (no auth required) -> api-auth
   await app.register(httpProxy as any, {
-    upstream: 'http://localhost:3002',
+    upstream: UPSTREAM_AUTH,
     prefix: '/api/public',
     // Decode the response
   });
 
   // Protected routes with RBAC -> appropriate microservice
   await app.register(httpProxy as any, {
-    upstream: 'http://localhost:3003',
+    upstream: UPSTREAM_EMPLOYEE,
     prefix: '/api/employee',
     // Pre-validation hook - check authentication and role
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
@@ -49,7 +55,7 @@ async function buildApp() {
   });
 
   await app.register(httpProxy as any, {
-    upstream: 'http://localhost:3004',
+    upstream: UPSTREAM_EMPLOYER,
     prefix: '/api/employer',
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
@@ -58,7 +64,7 @@ async function buildApp() {
   });
 
   await app.register(httpProxy as any, {
-    upstream: 'http://localhost:3005',
+    upstream: UPSTREAM_ADMIN,
     prefix: '/api/admin',
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
@@ -68,7 +74,7 @@ async function buildApp() {
 
   // Shared routes (require auth but no specific role) -> can go to any, let's use api-auth
   await app.register(httpProxy as any, {
-    upstream: 'http://localhost:3002',
+    upstream: UPSTREAM_AUTH,
     prefix: '/api',
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
