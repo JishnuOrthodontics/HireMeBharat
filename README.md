@@ -202,3 +202,5 @@ Public, no-auth health and landing stats:
 
 Ensure **Firebase Console → Authentication → Settings → Authorized domains** includes **`hiremebharat.com`** (and **`localhost`** for dev).
 
+The GitHub/backend secret **`FIREBASE_PROJECT_ID`** must be the **same Firebase project ID** as the frontend (`**VITE_FIREBASE_PROJECT_ID**` / Firebase console), for example **`hiremeapp2026-72a87`**. If it differs from the project that mints ID tokens (e.g. **`hiremeapp2026`** vs **`hiremeapp2026-72a87`**), **`verifyIdToken`** fails and **`/api/public/register`** returns **401 Invalid token**.
+
