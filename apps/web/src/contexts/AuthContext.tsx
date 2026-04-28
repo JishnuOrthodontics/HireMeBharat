@@ -47,6 +47,15 @@ interface AuthContextValue extends AuthState {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+/** Duplicate bearer on a non-standard header so proxies that strip `Authorization` still reach api-auth. */
+function bearerHeaders(token: string): Record<string, string> {
+  const bearer = `Bearer ${token}`;
+  return {
+    Authorization: bearer,
+    'X-Firebase-Authorization': bearer,
+  };
+}
+
 // ---- Context ----
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -54,7 +63,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 async function apiPost(path: string, token: string, body: Record<string, unknown>) {
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', ...bearerHeaders(token) },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -66,7 +75,7 @@ async function apiPost(path: string, token: string, body: Record<string, unknown
 
 async function apiGet(path: string, token: string) {
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: bearerHeaders(token),
   });
   if (res.status === 404) return null;
   if (!res.ok) {
@@ -274,3 +283,4 @@ function friendlyError(code: string): string {
       return code;
   }
 }
+

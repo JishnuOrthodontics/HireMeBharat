@@ -2,8 +2,11 @@ import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from 'dotenv';
 import httpProxy from '@fastify/http-proxy';
-import { registerAuthPlugin } from '@hiremebharat/backend-core';
-import { registerRbacPlugin } from '@hiremebharat/backend-core';
+import {
+  registerAuthPlugin,
+  registerRbacPlugin,
+  getBearerAuthorizationHeader,
+} from '@hiremebharat/backend-core';
 
 config();
 
@@ -16,13 +19,12 @@ const UPSTREAM_EMPLOYEE = process.env.UPSTREAM_EMPLOYEE ?? 'http://127.0.0.1:300
 const UPSTREAM_EMPLOYER = process.env.UPSTREAM_EMPLOYER ?? 'http://127.0.0.1:3004';
 const UPSTREAM_ADMIN = process.env.UPSTREAM_ADMIN ?? 'http://127.0.0.1:3005';
 
-/** @fastify/reply-from may drop `authorization` while handling Connection hop-by-hop headers — always forward from the client request. */
+/** @fastify/reply-from may drop `authorization` while handling Connection hop-by-hop headers — restore from inbound bearer (incl. X-Firebase-Authorization fallback). */
 function preserveInboundAuth(originalReq: FastifyRequest, headers: Record<string, unknown>) {
-  const auth = originalReq.headers.authorization;
-  if (typeof auth === 'string') {
-    (headers as Record<string, string>).authorization = auth;
-  }
-  return headers as Record<string, string>;
+  const out = { ...headers } as Record<string, string>;
+  const bearer = getBearerAuthorizationHeader(originalReq);
+  if (bearer) out.authorization = bearer;
+  return out;
 }
 
 const forwardAuthReplyOptions = { rewriteRequestHeaders: preserveInboundAuth };
@@ -38,9 +40,11 @@ async function buildApp() {
   });
 
   // --- Plugins ---
+  const frontendOrigin = process.env.FRONTEND_URL || 'https://hiremebharat.com';
   await app.register(cors, {
-    origin: process.env.FRONTEND_URL || 'https://hiremebharat.com',
+    origin: [frontendOrigin, 'https://hiremebharat.com', 'https://www.hiremebharat.com', 'http://localhost:5173'],
     credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Firebase-Authorization'],
   });
 
   await app.register(registerAuthPlugin);

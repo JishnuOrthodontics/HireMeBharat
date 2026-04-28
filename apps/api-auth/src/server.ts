@@ -20,9 +20,11 @@ async function buildApp() {
   });
 
   // --- Plugins ---
+  const frontendOrigin = process.env.FRONTEND_URL || 'https://hiremebharat.com';
   await app.register(cors, {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [frontendOrigin, 'https://hiremebharat.com', 'https://www.hiremebharat.com', 'http://localhost:5173'],
     credentials: true,
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Firebase-Authorization'],
   });
 
   await registerMongoPlugin(app);

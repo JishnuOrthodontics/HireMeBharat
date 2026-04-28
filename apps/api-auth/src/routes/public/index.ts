@@ -1,16 +1,19 @@
 import { FastifyInstance } from 'fastify';
 import admin from 'firebase-admin';
+import { getBearerAuthorizationHeader } from '@hiremebharat/backend-core';
 
 export async function publicRoutes(app: FastifyInstance) {
 
-  // --- Helper: verify token from Authorization header ---
+  // --- Helper: verify token from Authorization / X-Firebase-Authorization ---
   async function verifyToken(request: any) {
-    const authHeader = request.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
-    const token = authHeader.substring(7);
+    const authHeader = getBearerAuthorizationHeader(request);
+    if (!authHeader?.startsWith('Bearer ')) return null;
+    const token = authHeader.slice(7);
     try {
       return await admin.auth().verifyIdToken(token);
-    } catch {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      app.log.warn({ verifyIdTokenError: msg }, 'verifyIdToken failed');
       return null;
     }
   }
@@ -171,3 +174,4 @@ export async function publicRoutes(app: FastifyInstance) {
     });
   });
 }
+

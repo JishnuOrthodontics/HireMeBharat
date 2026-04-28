@@ -1,5 +1,6 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import admin from 'firebase-admin';
+import { getBearerAuthorizationHeader } from './request-auth.js';
 
 // Extended request type with user info
 import './types.js';
@@ -9,7 +10,7 @@ let firebaseInitialized = false;
 function initFirebase() {
   if (firebaseInitialized) return;
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || 'hiremeapp-d2496';
+  const projectId = process.env.FIREBASE_PROJECT_ID || 'hiremeapp2026';
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
   if (privateKey) {
@@ -21,13 +22,13 @@ function initFirebase() {
         privateKey,
       }),
     });
-    console.log('🔐 Firebase Admin SDK initialized (service account)');
+    console.log(`🔐 Firebase Admin SDK initialized (service account) projectId=${projectId}`);
   } else {
     // Development: Initialize with project ID only (uses ADC or emulator)
     admin.initializeApp({
       projectId,
     });
-    console.log('🔐 Firebase Admin SDK initialized (dev mode — project ID only)');
+    console.log(`🔐 Firebase Admin SDK initialized (dev mode — project ID only) projectId=${projectId}`);
   }
 
   firebaseInitialized = true;
@@ -38,7 +39,7 @@ export async function registerAuthPlugin(app: FastifyInstance) {
 
   const authenticate = async (request: FastifyRequest, reply: any) => {
     try {
-      const authHeader = request.headers.authorization;
+      const authHeader = getBearerAuthorizationHeader(request);
 
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return reply.code(401).send({
@@ -99,3 +100,4 @@ export async function registerAuthPlugin(app: FastifyInstance) {
 
   app.decorate('authenticate', authenticate);
 }
+
