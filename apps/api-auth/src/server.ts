@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { config } from 'dotenv';
-import { registerMongoPlugin } from '@hiremebharat/backend-core';
+import { registerMongoPlugin, registerAuthPlugin } from '@hiremebharat/backend-core';
 import { publicRoutes } from './routes/public/index.js';
 
 config();
@@ -26,6 +26,8 @@ async function buildApp() {
   });
 
   await registerMongoPlugin(app);
+  // Required so firebase-admin is initialized before /api/public calls verifyIdToken (each container has its own process).
+  await app.register(registerAuthPlugin);
 
   // --- Routes ---
   // Public routes (no auth required)
