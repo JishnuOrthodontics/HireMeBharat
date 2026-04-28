@@ -30,8 +30,11 @@ export default function SignIn() {
     setError('');
     setLoading(true);
     try {
-      await signInWithEmail(email, password);
-      // useEffect above will handle redirect when userProfile is set
+      const result = await signInWithEmail(email, password);
+      if (result.needsRoleSelection) {
+        navigate('/role-select', { replace: true });
+      }
+      // otherwise useEffect above will handle redirect when userProfile is set
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -144,3 +147,4 @@ export default function SignIn() {
     </div>
   );
 }
+

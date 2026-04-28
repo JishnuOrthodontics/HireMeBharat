@@ -4,7 +4,8 @@ import { useAuth, type UserRole } from '../../contexts/AuthContext';
 import './Auth.css';
 
 /**
- * Role selection page for Google Sign-In users who don't have a profile yet.
+ * Role selection page for authenticated users who don't have a backend profile yet.
+ * This is used for first-time Google sign-in and email users missing app profile records.
  */
 export default function RoleSelect() {
   const { firebaseUser, completeGoogleRegistration, needsRoleSelection } = useAuth();
@@ -117,3 +118,4 @@ export default function RoleSelect() {
     </div>
   );
 }
+

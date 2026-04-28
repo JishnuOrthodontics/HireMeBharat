@@ -36,7 +36,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<{ needsRoleSelection: boolean }>;
   signUpWithEmail: (email: string, password: string, name: string, role: UserRole) => Promise<void>;
   signInWithGoogle: () => Promise<{ isNewUser: boolean }>;
   completeGoogleRegistration: (role: UserRole) => Promise<void>;
@@ -135,15 +135,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ---- Auth methods ----
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const signInWithEmail = async (email: string, password: string): Promise<{ needsRoleSelection: boolean }> => {
     patch({ loading: true, error: null });
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       const profile = await fetchProfile(cred.user);
       if (!profile) {
-        throw new Error('No account profile found. Please register first.');
+        // Firebase user exists but backend profile is missing; send user to role selection
+        // so we can create the app profile via /api/public/register.
+        patch({
+          firebaseUser: cred.user,
+          userProfile: null,
+          loading: false,
+          needsRoleSelection: true,
+        });
+        return { needsRoleSelection: true };
       }
       patch({ firebaseUser: cred.user, userProfile: profile, loading: false, needsRoleSelection: false });
+      return { needsRoleSelection: false };
     } catch (err: any) {
       const msg = friendlyError(err.code || err.message);
       patch({ loading: false, error: msg });
