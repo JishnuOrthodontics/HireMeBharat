@@ -3,6 +3,14 @@ import admin from 'firebase-admin';
 import { getBearerAuthorizationHeader } from '@hiremebharat/backend-core';
 
 export async function publicRoutes(app: FastifyInstance) {
+  const classifyVerifyError = (msg: string) => {
+    const m = msg.toLowerCase();
+    if (m.includes('audience') || m.includes('aud claim')) return 'project-mismatch';
+    if (m.includes('expired')) return 'expired';
+    if (m.includes('issued at') || m.includes('future')) return 'clock-skew';
+    if (m.includes('certificate') || m.includes('kid')) return 'cert-key-mismatch';
+    return 'invalid';
+  };
 
   // --- Helper: verify token from Authorization / X-Firebase-Authorization ---
   async function verifyToken(request: any) {
@@ -13,7 +21,8 @@ export async function publicRoutes(app: FastifyInstance) {
       return await admin.auth().verifyIdToken(token);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      app.log.warn({ verifyIdTokenError: msg }, 'verifyIdToken failed');
+      (request as any).verifyTokenReason = classifyVerifyError(msg);
+      app.log.warn({ verifyIdTokenError: msg, reason: (request as any).verifyTokenReason }, 'verifyIdToken failed');
       return null;
     }
   }
@@ -22,7 +31,11 @@ export async function publicRoutes(app: FastifyInstance) {
   app.post('/register', async (request, reply) => {
     const decoded = await verifyToken(request);
     if (!decoded) {
-      return reply.code(401).send({ error: 'Unauthorized', message: 'Invalid token' });
+      const reason = (request as any).verifyTokenReason || 'invalid';
+      return reply
+        .header('x-auth-debug-reason', String(reason))
+        .code(401)
+        .send({ error: 'Unauthorized', message: 'Invalid token', reason });
     }
 
     const { displayName, role, photoURL } = request.body as any;
@@ -106,7 +119,11 @@ export async function publicRoutes(app: FastifyInstance) {
   app.get('/me', async (request, reply) => {
     const decoded = await verifyToken(request);
     if (!decoded) {
-      return reply.code(401).send({ error: 'Unauthorized', message: 'Invalid token' });
+      const reason = (request as any).verifyTokenReason || 'invalid';
+      return reply
+        .header('x-auth-debug-reason', String(reason))
+        .code(401)
+        .send({ error: 'Unauthorized', message: 'Invalid token', reason });
     }
 
     try {
