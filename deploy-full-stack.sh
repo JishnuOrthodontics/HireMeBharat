@@ -11,7 +11,7 @@ cd "$DIR"
 
 # If a registry is already serving :5000, keep it (images were pushed there from CI).
 # Replacing it with a new compose-bound volume would lose those layers.
-APP_SERVICES="api-gateway api-auth api-employee api-employer api-admin tunnel"
+APP_SERVICES="api-gateway api-auth api-employee api-employer api-admin"
 if curl -sfS --max-time 3 "http://127.0.0.1:5000/v2/" >/dev/null 2>&1; then
   COMPOSE_TARGETS="${APP_SERVICES}"
 else
