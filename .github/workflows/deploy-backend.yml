@@ -261,7 +261,9 @@ jobs:
           username: ${{ secrets.GCP_VM_USERNAME }}
           key_path: .ci_deploy_key
           script: |
-            docker system prune -f
+            docker system prune -af --volumes || true
+            docker builder prune -af || true
+            df -h || true
 
       - name: Prepare configuration files
         env:

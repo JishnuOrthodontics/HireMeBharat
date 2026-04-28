@@ -31,6 +31,14 @@ if [ -f .env ]; then
   fi
 fi
 
+# Free space before pulling large layers (BuildKit cache can exhaust small VM disks).
+echo "Pre-deploy disk usage:"
+df -h || true
+docker builder prune -af || true
+docker image prune -af || true
+docker container prune -f || true
+docker volume prune -f || true
+
 if [ -n "${COMPOSE_TARGETS}" ]; then
   # shellcheck disable=SC2086
   docker compose -f docker-compose.prod.yml pull ${COMPOSE_TARGETS}
@@ -40,7 +48,13 @@ else
   docker compose -f docker-compose.prod.yml pull
   docker compose -f docker-compose.prod.yml up -d
 fi
-docker image prune -f
+
+# Post-deploy cleanup
+docker image prune -af || true
+docker builder prune -af || true
+
+echo "Post-deploy disk usage:"
+df -h || true
 
 echo "Full stack deployed with tag ${TAG}."
 

@@ -9,6 +9,10 @@ IMAGE_NAME="hiremebharat-${SERVICE_NAME}"
 
 echo "Deploying service: $SERVICE_NAME with tag: $IMAGE_TAG"
 
+# Keep VM from filling up during image pulls.
+docker builder prune -af || true
+docker image prune -af || true
+
 # Pull the new image
 docker pull ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
 
@@ -20,6 +24,7 @@ sed -i "s|image: .*hiremebharat-${SERVICE_NAME}:.*|image: ${REGISTRY}/${IMAGE_NA
 docker compose -f docker-compose.prod.yml up -d $SERVICE_NAME
 
 # Cleanup old images to save space
-docker image prune -f
+docker image prune -af || true
+docker builder prune -af || true
 
 echo "Deployment of $SERVICE_NAME completed"
