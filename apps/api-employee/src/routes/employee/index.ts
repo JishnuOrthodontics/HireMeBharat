@@ -164,7 +164,7 @@ export async function employeeRoutes(app: FastifyInstance) {
           expectedCtc: Number(profileDoc?.expectedCtc || 0),
           expectedCurrency: profileDoc?.expectedCurrency || 'USD',
           noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
-          publicProfileUrl: `/employee/${uid}`,
+          publicProfileUrl: `/employee/view/${uid}`,
           updatedAt: toIso(profileDoc?.updatedAt || userDoc?.updatedAt),
         },
       });

@@ -72,7 +72,8 @@ function App() {
                 </RoleGuard>
               </AuthGuard>
             } />
-            <Route path="/employee/:uid" element={
+            {/* Must not use /employee/:uid — it steals /employee/profile, /employee/matches, etc. */}
+            <Route path="/employee/view/:uid" element={
               <AuthGuard>
                 <RoleGuard allowedRoles={['EMPLOYER', 'ADMIN']}>
                   <EmployeePublicProfile />

@@ -122,7 +122,7 @@ export default function EmployeeProfile() {
   }, []);
 
   const publicProfileUrl = useMemo(
-    () => (profile ? `${window.location.origin}/employee/${profile.uid}` : ''),
+    () => (profile ? `${window.location.origin}/employee/view/${profile.uid}` : ''),
     [profile]
   );
 
