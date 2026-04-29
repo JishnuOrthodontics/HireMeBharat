@@ -39,13 +39,22 @@ export interface EmployeeProfileApi {
   displayName: string;
   role: string;
   photoURL?: string | null;
+  bannerUrl?: string | null;
   headline: string;
+  /** Long-form summary; falls back to headline in UI when empty */
+  about?: string;
   location: string;
   openToRelocation: boolean;
   yearsExperience: number;
   skills: string[];
   experience: Array<{ title: string; company: string; years: number }>;
   compensation: { current: number; expected: number; currency: string };
+  publicProfileSlug?: string;
+  openToWork?: boolean;
+  openToWorkVisibility?: 'RECRUITERS_ONLY' | 'PRIVATE';
+  expectedCtc?: number;
+  expectedCurrency?: string;
+  noticePeriodDays?: number;
   updatedAt?: string | null;
 }
 
@@ -58,6 +67,31 @@ export interface EmployeeMatchApi {
   salaryRange: string;
   location: string;
   tags: string[];
+  isSalaryMismatched?: boolean;
+  updatedAt?: string | null;
+}
+
+export interface EmployeeProfileStrengthApi {
+  profileStrength: number;
+  suggestions: string[];
+}
+
+export interface EmployeePublicProfileApi {
+  uid: string;
+  displayName: string;
+  photoURL?: string | null;
+  bannerUrl?: string | null;
+  headline: string;
+  about?: string;
+  location: string;
+  yearsExperience: number;
+  skills: string[];
+  experience: Array<{ title: string; company: string; years: number }>;
+  openToWork: boolean;
+  expectedCtc: number;
+  expectedCurrency: string;
+  noticePeriodDays: number;
+  publicProfileUrl: string;
   updatedAt?: string | null;
 }
 
@@ -94,13 +128,16 @@ export async function patchEmployeeProfile(payload: Partial<EmployeeProfileApi>)
   });
 }
 
-export async function getEmployeeMatches(params: { status?: string; limit?: number; offset?: number } = {}) {
+export async function getEmployeeMatches(
+  params: { status?: string; showMismatched?: boolean; limit?: number; offset?: number } = {}
+) {
   const query = new URLSearchParams();
   if (params.status) query.set('status', params.status);
+  if (params.showMismatched !== undefined) query.set('showMismatched', String(params.showMismatched));
   if (params.limit) query.set('limit', String(params.limit));
   if (params.offset) query.set('offset', String(params.offset));
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  return request<{ matches: EmployeeMatchApi[]; total: number; limit: number; offset: number }>(`/api/employee/matches${suffix}`);
+  return request<{ matches: EmployeeMatchApi[]; total: number; limit: number; offset: number; showMismatched?: boolean }>(`/api/employee/matches${suffix}`);
 }
 
 export async function updateMatchStatus(matchId: string, action: 'interest' | 'save' | 'decline') {
@@ -135,5 +172,37 @@ export async function getDashboardSummary() {
   return request<{ summary: { activeMatches: number; interviews: number; unreadNotifications: number } }>(
     '/api/employee/dashboard-summary'
   );
+}
+
+export async function getEmployeeProfileStrength() {
+  return request<EmployeeProfileStrengthApi>('/api/employee/profile-strength');
+}
+
+export async function patchEmployeeProfileVisibility(payload: {
+  openToWork?: boolean;
+  openToWorkVisibility?: 'RECRUITERS_ONLY' | 'PRIVATE';
+  publicProfileSlug?: string;
+}) {
+  return request<{ ok: boolean }>('/api/employee/profile-visibility', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function patchEmployeeSalaryExpectations(payload: {
+  expectedCtc: number;
+  expectedCurrency: string;
+  noticePeriodDays: number;
+}) {
+  return request<{ ok: boolean }>('/api/employee/salary-expectations', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getEmployeePublicProfile(uid: string) {
+  return request<{ profile: EmployeePublicProfileApi }>(`/api/employee/public/${encodeURIComponent(uid)}`);
 }
 

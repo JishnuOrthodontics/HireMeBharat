@@ -16,6 +16,7 @@ const RoleSelect = lazy(() => import('./pages/auth/RoleSelect'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const EmployeeDashboard = lazy(() => import('./pages/employee/Dashboard'));
 const EmployerDashboard = lazy(() => import('./pages/employer/Dashboard'));
+const EmployeePublicProfile = lazy(() => import('./pages/employee/EmployeePublicProfile'));
 
 function LoadingScreen() {
   return (
@@ -68,6 +69,13 @@ function App() {
               <AuthGuard>
                 <RoleGuard allowedRoles={['EMPLOYEE']}>
                   <EmployeeDashboard />
+                </RoleGuard>
+              </AuthGuard>
+            } />
+            <Route path="/employee/:uid" element={
+              <AuthGuard>
+                <RoleGuard allowedRoles={['EMPLOYER', 'ADMIN']}>
+                  <EmployeePublicProfile />
                 </RoleGuard>
               </AuthGuard>
             } />

@@ -6,6 +6,7 @@ import '@hiremebharat/backend-core';
 const profileUpdateSchema = z.object({
   displayName: z.string().min(1).max(120).optional(),
   headline: z.string().max(200).optional(),
+  about: z.string().max(8000).optional(),
   location: z.string().max(120).optional(),
   openToRelocation: z.boolean().optional(),
   yearsExperience: z.number().int().min(0).max(60).optional(),
@@ -20,12 +21,33 @@ const profileUpdateSchema = z.object({
     expected: z.number().min(0),
     currency: z.string().min(3).max(8),
   }).optional(),
+  openToWork: z.boolean().optional(),
+  openToWorkVisibility: z.enum(['RECRUITERS_ONLY', 'PRIVATE']).optional(),
+  expectedCtc: z.number().min(0).optional(),
+  expectedCurrency: z.string().min(3).max(8).optional(),
+  noticePeriodDays: z.number().int().min(0).max(365).optional(),
+  publicProfileSlug: z.string().trim().min(3).max(120).optional(),
+  photoURL: z.string().max(2_500_000).optional(),
+  bannerUrl: z.string().max(2_500_000).optional(),
 });
 
 const matchesQuerySchema = z.object({
   status: z.enum(['ALL', 'NEW', 'SAVED', 'INTERESTED', 'APPLIED', 'INTERVIEW', 'DECLINED']).optional(),
+  showMismatched: z.coerce.boolean().default(false),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
+});
+
+const visibilityPatchSchema = z.object({
+  openToWork: z.boolean().optional(),
+  openToWorkVisibility: z.enum(['RECRUITERS_ONLY', 'PRIVATE']).optional(),
+  publicProfileSlug: z.string().trim().min(3).max(120).optional(),
+});
+
+const salaryExpectationsPatchSchema = z.object({
+  expectedCtc: z.number().min(0),
+  expectedCurrency: z.string().min(3).max(8),
+  noticePeriodDays: z.number().int().min(0).max(365),
 });
 
 const messagePostSchema = z.object({
@@ -39,7 +61,101 @@ function toIso(value: unknown): string | null {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+function parseSalaryRangeUsd(value: string): { min: number; max: number } | null {
+  if (!value) return null;
+  const normalized = value.replace(/,/g, '').toLowerCase();
+  const kMatches = Array.from(normalized.matchAll(/\$?\s*([0-9]+(?:\.[0-9]+)?)\s*k/g)).map((m) => Number(m[1]) * 1000);
+  if (kMatches.length >= 2) return { min: Math.min(kMatches[0], kMatches[1]), max: Math.max(kMatches[0], kMatches[1]) };
+  const rawMatches = Array.from(normalized.matchAll(/\$?\s*([0-9]+(?:\.[0-9]+)?)/g)).map((m) => Number(m[1]));
+  if (rawMatches.length >= 2) return { min: Math.min(rawMatches[0], rawMatches[1]), max: Math.max(rawMatches[0], rawMatches[1]) };
+  return null;
+}
+
+function buildProfileStrength(input: {
+  headline?: string;
+  about?: string;
+  skills?: string[];
+  experience?: Array<{ years?: number }>;
+  expectedCtc?: number;
+  expectedCurrency?: string;
+  noticePeriodDays?: number;
+  openToWork?: boolean;
+  openToWorkVisibility?: string;
+}) {
+  let score = 0;
+  const suggestions: string[] = [];
+  if ((input.headline || '').trim().length >= 12) score += 15;
+  else suggestions.push('Add a stronger headline to summarize your expertise.');
+
+  const skillsCount = (input.skills || []).filter(Boolean).length;
+  if (skillsCount >= 8) score += 20;
+  else {
+    score += Math.min(20, Math.round((skillsCount / 8) * 20));
+    suggestions.push('Add at least 8 skills to improve discoverability.');
+  }
+
+  const experienceYears = (input.experience || []).reduce((sum, exp) => sum + Number(exp?.years || 0), 0);
+  if ((input.experience || []).length >= 2 && experienceYears >= 4) score += 25;
+  else {
+    score += Math.min(25, Math.round((experienceYears / 4) * 25));
+    suggestions.push('Add more detailed work experience entries.');
+  }
+
+  const summaryText = `${(input.headline || '').trim()} ${(input.about || '').trim()}`.trim();
+  if (summaryText.length >= 30) score += 15;
+  else suggestions.push('Expand your profile summary with role goals and domain focus.');
+
+  if (Number(input.expectedCtc || 0) > 0 && (input.expectedCurrency || '').trim().length >= 3 && Number(input.noticePeriodDays) >= 0) {
+    score += 15;
+  } else suggestions.push('Set expected CTC, currency, and notice period.');
+
+  if (input.openToWork && String(input.openToWorkVisibility || '') === 'RECRUITERS_ONLY') score += 10;
+  else suggestions.push('Enable open-to-work for recruiter visibility.');
+
+  return { score: Math.max(0, Math.min(100, score)), suggestions };
+}
+
 export async function employeeRoutes(app: FastifyInstance) {
+  app.get(
+    '/public/:uid',
+    { preHandler: [app.authenticate, app.requireRole('EMPLOYER', 'ADMIN')] },
+    async (request, reply) => {
+      const uid = String((request.params as any)?.uid || '').trim();
+      if (!uid) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid uid' });
+      const db = app.mongo?.db;
+      if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+      const [userDoc, profileDoc] = await Promise.all([
+        db.collection('users').findOne({ uid, role: 'EMPLOYEE' }),
+        db.collection('candidate_profiles').findOne({ userId: uid }),
+      ]);
+      if (!userDoc) return reply.code(404).send({ error: 'Not Found', message: 'Employee not found' });
+
+      const visibility = String(profileDoc?.openToWorkVisibility || 'RECRUITERS_ONLY');
+      const openToWork = Boolean(profileDoc?.openToWork) && visibility === 'RECRUITERS_ONLY';
+      return reply.send({
+        profile: {
+          uid,
+          displayName: userDoc.displayName || 'Employee',
+          photoURL: userDoc.photoURL || null,
+          bannerUrl: profileDoc?.bannerUrl || null,
+          headline: profileDoc?.headline || '',
+          about: profileDoc?.about || '',
+          location: profileDoc?.location || '',
+          yearsExperience: Number(profileDoc?.yearsExperience || 0),
+          skills: Array.isArray(profileDoc?.skills) ? profileDoc.skills : [],
+          experience: Array.isArray(profileDoc?.experience) ? profileDoc.experience : [],
+          openToWork,
+          expectedCtc: Number(profileDoc?.expectedCtc || 0),
+          expectedCurrency: profileDoc?.expectedCurrency || 'USD',
+          noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
+          publicProfileUrl: `/employee/${uid}`,
+          updatedAt: toIso(profileDoc?.updatedAt || userDoc?.updatedAt),
+        },
+      });
+    }
+  );
+
   app.addHook('preHandler', app.authenticate);
   app.addHook('preHandler', app.requireRole('EMPLOYEE'));
 
@@ -49,6 +165,7 @@ export async function employeeRoutes(app: FastifyInstance) {
     await Promise.all([
       db.collection('users').createIndex({ uid: 1 }, { unique: true }),
       db.collection('candidate_profiles').createIndex({ userId: 1 }, { unique: true }),
+      db.collection('candidate_profiles').createIndex({ publicProfileSlug: 1 }),
       db.collection('employee_matches').createIndex({ employeeUid: 1, status: 1, updatedAt: -1 }),
       db.collection('employee_conversations').createIndex({ employeeUid: 1 }, { unique: true }),
       db.collection('employee_messages').createIndex({ conversationId: 1, timestamp: 1 }),
@@ -69,19 +186,29 @@ export async function employeeRoutes(app: FastifyInstance) {
     const profileDoc = await profiles.findOne({ userId: uid });
 
     const fallbackDisplayName = request.user!.displayName || email?.split('@')[0] || 'User';
+    const aboutStored = profileDoc?.about;
+    const headlineVal = profileDoc?.headline || '';
     const result = {
       uid,
       email,
       displayName: userDoc?.displayName || fallbackDisplayName,
       role: userDoc?.role || 'EMPLOYEE',
       photoURL: userDoc?.photoURL || null,
-      headline: profileDoc?.headline || '',
+      bannerUrl: profileDoc?.bannerUrl || null,
+      headline: headlineVal,
+      about: aboutStored != null && aboutStored !== '' ? aboutStored : '',
       location: profileDoc?.location || '',
       openToRelocation: Boolean(profileDoc?.openToRelocation),
       yearsExperience: profileDoc?.yearsExperience || 0,
       skills: Array.isArray(profileDoc?.skills) ? profileDoc!.skills : [],
       experience: Array.isArray(profileDoc?.experience) ? profileDoc!.experience : [],
       compensation: profileDoc?.compensation || { current: 0, expected: 0, currency: 'USD' },
+      openToWork: Boolean(profileDoc?.openToWork),
+      openToWorkVisibility: profileDoc?.openToWorkVisibility || 'RECRUITERS_ONLY',
+      expectedCtc: Number(profileDoc?.expectedCtc || 0),
+      expectedCurrency: profileDoc?.expectedCurrency || 'USD',
+      noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
+      publicProfileSlug: profileDoc?.publicProfileSlug || uid,
       updatedAt: toIso(profileDoc?.updatedAt || userDoc?.updatedAt),
     };
 
@@ -100,28 +227,101 @@ export async function employeeRoutes(app: FastifyInstance) {
     const payload = parsed.data;
     const now = new Date();
 
+    const { displayName, photoURL, ...profilePayload } = payload;
+    const profileUpdate = Object.fromEntries(
+      Object.entries(profilePayload).filter(([, v]) => v !== undefined)
+    ) as Record<string, unknown>;
+
     await db.collection('candidate_profiles').updateOne(
       { userId: uid },
       {
-        $set: { ...payload, updatedAt: now },
+        $set: { ...profileUpdate, updatedAt: now },
         $setOnInsert: {
           userId: uid,
           skills: [],
           experience: [],
           compensation: { current: 0, expected: 0, currency: 'USD' },
+          openToWork: false,
+          openToWorkVisibility: 'RECRUITERS_ONLY',
+          expectedCtc: 0,
+          expectedCurrency: 'USD',
+          noticePeriodDays: 0,
+          publicProfileSlug: uid,
           createdAt: now,
         },
       },
       { upsert: true }
     );
 
-    if (payload.displayName) {
-      await db.collection('users').updateOne(
-        { uid },
-        { $set: { displayName: payload.displayName, updatedAt: now } }
-      );
+    const userSet: Record<string, unknown> = { updatedAt: now };
+    if (displayName !== undefined) userSet.displayName = displayName;
+    if (photoURL !== undefined) userSet.photoURL = photoURL;
+    if (Object.keys(userSet).length > 1) {
+      await db.collection('users').updateOne({ uid }, { $set: userSet });
     }
 
+    return reply.send({ ok: true });
+  });
+
+  app.get('/profile-strength', async (request, reply) => {
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+    const profileDoc = await db.collection('candidate_profiles').findOne({ userId: uid });
+    const strength = buildProfileStrength({
+      headline: profileDoc?.headline,
+      about: profileDoc?.about,
+      skills: Array.isArray(profileDoc?.skills) ? profileDoc.skills : [],
+      experience: Array.isArray(profileDoc?.experience) ? profileDoc.experience : [],
+      expectedCtc: Number(profileDoc?.expectedCtc || 0),
+      expectedCurrency: profileDoc?.expectedCurrency,
+      noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
+      openToWork: Boolean(profileDoc?.openToWork),
+      openToWorkVisibility: String(profileDoc?.openToWorkVisibility || 'RECRUITERS_ONLY'),
+    });
+    return reply.send({ profileStrength: strength.score, suggestions: strength.suggestions });
+  });
+
+  app.patch('/profile-visibility', async (request, reply) => {
+    const parsed = visibilityPatchSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Bad Request', message: parsed.error.issues[0]?.message || 'Invalid payload' });
+    }
+    if (Object.keys(parsed.data).length === 0) {
+      return reply.code(400).send({ error: 'Bad Request', message: 'At least one field is required' });
+    }
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+    const now = new Date();
+    await db.collection('candidate_profiles').updateOne(
+      { userId: uid },
+      {
+        $set: { ...parsed.data, updatedAt: now },
+        $setOnInsert: { userId: uid, createdAt: now, expectedCurrency: 'USD', publicProfileSlug: uid },
+      },
+      { upsert: true }
+    );
+    return reply.send({ ok: true });
+  });
+
+  app.patch('/salary-expectations', async (request, reply) => {
+    const parsed = salaryExpectationsPatchSchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.code(400).send({ error: 'Bad Request', message: parsed.error.issues[0]?.message || 'Invalid payload' });
+    }
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+    const now = new Date();
+    await db.collection('candidate_profiles').updateOne(
+      { userId: uid },
+      {
+        $set: { ...parsed.data, updatedAt: now },
+        $setOnInsert: { userId: uid, createdAt: now, openToWorkVisibility: 'RECRUITERS_ONLY', publicProfileSlug: uid },
+      },
+      { upsert: true }
+    );
     return reply.send({ ok: true });
   });
 
@@ -131,7 +331,7 @@ export async function employeeRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
     }
-    const { status, limit, offset } = parsed.data;
+    const { status, showMismatched, limit, offset } = parsed.data;
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
@@ -185,11 +385,24 @@ export async function employeeRoutes(app: FastifyInstance) {
     }
     if (status && status !== 'ALL') filter.status = status;
 
-    const docs = await matches.find(filter).sort({ updatedAt: -1 }).skip(offset).limit(limit).toArray();
-    const total = await matches.countDocuments(filter);
+    const [profileDoc, allDocs] = await Promise.all([
+      db.collection('candidate_profiles').findOne({ userId: uid }),
+      matches.find(filter).sort({ updatedAt: -1 }).toArray(),
+    ]);
+    const expectedCtc = Number(profileDoc?.expectedCtc || 0);
+    const mismatchThreshold = expectedCtc > 0 ? expectedCtc * 0.8 : 0;
+
+    const enriched = allDocs.map((doc) => {
+      const parsedSalary = parseSalaryRangeUsd(String(doc.salaryRange || ''));
+      const isMismatched = Boolean(expectedCtc > 0 && parsedSalary && parsedSalary.max < mismatchThreshold);
+      return { doc, isMismatched };
+    });
+    const filtered = showMismatched ? enriched : enriched.filter((item) => !item.isMismatched);
+    const total = filtered.length;
+    const docs = filtered.slice(offset, offset + limit);
 
     return reply.send({
-      matches: docs.map((doc) => ({
+      matches: docs.map(({ doc, isMismatched }) => ({
         id: String(doc._id),
         title: doc.title,
         company: doc.company,
@@ -198,11 +411,13 @@ export async function employeeRoutes(app: FastifyInstance) {
         salaryRange: doc.salaryRange || '',
         location: doc.location || '',
         tags: Array.isArray(doc.tags) ? doc.tags : [],
+        isSalaryMismatched: isMismatched,
         updatedAt: toIso(doc.updatedAt),
       })),
       total,
       limit,
       offset,
+      showMismatched,
     });
   });
 

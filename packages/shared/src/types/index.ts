@@ -94,10 +94,19 @@ export interface CandidateProfile {
   userId: string;
   skills: string[];
   headline?: string;
+  about?: string;
+  bannerUrl?: string;
   location?: string;
   openToRelocation?: boolean;
   yearsExperience?: number;
   resumeUrl?: string;
+  publicProfileSlug?: string;
+  openToWork?: boolean;
+  openToWorkVisibility?: 'RECRUITERS_ONLY' | 'PRIVATE';
+  expectedCtc?: number;
+  expectedCurrency?: string;
+  noticePeriodDays?: number;
+  profileStrength?: number;
   experience: {
     title: string;
     company: string;
@@ -127,6 +136,7 @@ export interface Match {
   status: 'NEW' | 'SAVED' | 'INTERESTED' | 'APPLIED' | 'INTERVIEW' | 'DECLINED';
   reviewedBy?: string;
   updatedByUid?: string;
+  isSalaryMismatched?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

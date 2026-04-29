@@ -20,12 +20,13 @@ export default function EmployeeMatches() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState('');
+  const [showMismatched, setShowMismatched] = useState(false);
 
   const load = async (tab: MatchTab) => {
     setLoading(true);
     setError('');
     try {
-      const res = await getEmployeeMatches({ status: tab, limit: 50 });
+      const res = await getEmployeeMatches({ status: tab, showMismatched, limit: 50 });
       setMatches(res.matches);
       setTotal(res.total);
     } catch (err: any) {
@@ -44,7 +45,7 @@ export default function EmployeeMatches() {
 
   useEffect(() => {
     load(activeTab);
-  }, [activeTab]);
+  }, [activeTab, showMismatched]);
 
   const onUpdate = async (matchId: string, action: 'interest' | 'save' | 'decline') => {
     setUpdatingId(matchId + action);
@@ -62,7 +63,13 @@ export default function EmployeeMatches() {
     <div className="dash-card">
       <div className="dash-card-header">
         <span className="dash-card-title">Your Matches</span>
-        <span style={{ fontSize: 13, color: 'var(--color-on-surface-variant)' }}>{total} total</span>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center', fontSize: 12, color: 'var(--color-on-surface-variant)' }}>
+            <input type="checkbox" checked={showMismatched} onChange={(e) => setShowMismatched(e.target.checked)} />
+            Show salary-mismatched roles
+          </label>
+          <span style={{ fontSize: 13, color: 'var(--color-on-surface-variant)' }}>{total} total</span>
+        </div>
       </div>
 
       {/* Filter Tabs */}
@@ -106,6 +113,11 @@ export default function EmployeeMatches() {
             </div>
             <div className="emp-match-tags">
               {(match.tags || []).map(t => <span key={t} className="emp-match-tag">{t}</span>)}
+              {match.isSalaryMismatched && (
+                <span className="emp-match-tag" style={{ borderColor: 'rgba(244,114,182,0.45)', color: '#f9a8d4' }}>
+                  Salary mismatch
+                </span>
+              )}
             </div>
             <div className="emp-match-actions">
               <button

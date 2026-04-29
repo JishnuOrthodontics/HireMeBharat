@@ -73,7 +73,12 @@ async function buildApp() {
     // Pre-validation hook - check authentication and role
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
-      await app.requireRole('EMPLOYEE')(request, reply);
+      const path = String((request as any).raw?.url || request.url || '');
+      if (path.startsWith('/api/employee/public/')) {
+        await app.requireRole('EMPLOYER', 'ADMIN')(request, reply);
+      } else {
+        await app.requireRole('EMPLOYEE')(request, reply);
+      }
     }
   });
 

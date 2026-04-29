@@ -268,6 +268,8 @@
 .emp-profile-banner {
   height: 180px;
   background: linear-gradient(135deg, rgba(80, 250, 123, 0.25), rgba(212, 175, 55, 0.12), rgba(80, 250, 123, 0.1));
+  background-size: cover;
+  background-position: center;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   position: relative;
 }
@@ -288,6 +290,48 @@
   position: absolute;
   bottom: -56px;
   left: 24px;
+  overflow: hidden;
+}
+
+.emp-profile-avatar-lg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.emp-edit-overlay-btn {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(18, 18, 26, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+
+.emp-edit-overlay-btn:hover {
+  transform: scale(1.03);
+  background: rgba(18, 18, 26, 0.95);
+}
+
+.emp-edit-overlay-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.emp-edit-overlay-btn.banner {
+  top: 12px;
+  right: 12px;
+}
+
+.emp-edit-overlay-btn.logo {
+  bottom: -44px;
+  left: 112px;
+  z-index: 2;
 }
 
 .emp-profile-info {
