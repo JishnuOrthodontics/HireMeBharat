@@ -78,9 +78,33 @@ export default function EmployeePublicProfile() {
 
       {profile.about?.trim() ? (
         <div className="dash-card">
-          <h2 className="emp-section-title">About</h2>
+          <h2 className="emp-section-title">Professional summary</h2>
           <div className="dash-card-body" style={{ padding: '0 16px 16px' }}>
             <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--color-on-surface)', whiteSpace: 'pre-wrap' }}>{profile.about.trim()}</p>
+          </div>
+        </div>
+      ) : null}
+
+      {(profile.linkedinUrl || profile.portfolioUrl) ? (
+        <div className="dash-card">
+          <h2 className="emp-section-title">Links</h2>
+          <div className="dash-card-body" style={{ padding: '0 16px 16px', display: 'grid', gap: 8 }}>
+            {profile.linkedinUrl ? (
+              <p style={{ margin: 0 }}>
+                <span style={{ color: 'var(--color-on-surface-variant)', fontSize: 12 }}>LinkedIn · </span>
+                <a href={profile.linkedinUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-container)' }}>
+                  {profile.linkedinUrl}
+                </a>
+              </p>
+            ) : null}
+            {profile.portfolioUrl ? (
+              <p style={{ margin: 0 }}>
+                <span style={{ color: 'var(--color-on-surface-variant)', fontSize: 12 }}>Portfolio · </span>
+                <a href={profile.portfolioUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-container)' }}>
+                  {profile.portfolioUrl}
+                </a>
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -97,8 +121,24 @@ export default function EmployeePublicProfile() {
         </div>
       </div>
 
+      {(profile.education && profile.education.length > 0) ? (
+        <div className="dash-card">
+          <h2 className="emp-section-title">Education</h2>
+          {profile.education!.map((ed, i) => (
+            <div key={i} className="emp-exp-item">
+              <div className="emp-exp-logo">🎓</div>
+              <div>
+                <p className="emp-exp-title">{ed.degree}</p>
+                <p className="emp-exp-company">{ed.institution}</p>
+                {ed.yearEnd != null ? <p className="emp-exp-dates">{ed.yearEnd}</p> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="dash-card">
-        <h2 className="emp-section-title">Experience</h2>
+        <h2 className="emp-section-title">Work experience</h2>
         {profile.experience.map((exp, i) => (
           <div key={`${exp.company}-${i}`} className="emp-exp-item">
             <div className="emp-exp-logo">💼</div>

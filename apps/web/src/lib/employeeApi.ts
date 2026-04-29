@@ -48,6 +48,9 @@ export interface EmployeeProfileApi {
   yearsExperience: number;
   skills: string[];
   experience: Array<{ title: string; company: string; years: number }>;
+  education?: Array<{ degree: string; institution: string; yearEnd?: number }>;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
   compensation: { current: number; expected: number; currency: string };
   publicProfileSlug?: string;
   openToWork?: boolean;
@@ -87,6 +90,9 @@ export interface EmployeePublicProfileApi {
   yearsExperience: number;
   skills: string[];
   experience: Array<{ title: string; company: string; years: number }>;
+  education?: Array<{ degree: string; institution: string; yearEnd?: number }>;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
   openToWork: boolean;
   expectedCtc: number;
   expectedCurrency: string;

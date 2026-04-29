@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   getEmployeeProfile,
   getEmployeeProfileStrength,
   patchEmployeeProfile,
   type EmployeeProfileApi,
 } from '../../lib/employeeApi';
+
+type ExpRow = { title: string; company: string; years: number };
+type EduRow = { degree: string; institution: string; yearEnd: string };
 
 type Draft = {
   displayName: string;
@@ -14,7 +17,8 @@ type Draft = {
   openToRelocation: boolean;
   yearsExperience: number;
   skillsText: string;
-  experience: Array<{ title: string; company: string; years: number }>;
+  experience: ExpRow[];
+  education: EduRow[];
   bannerUrl: string;
   photoURL: string;
   openToWork: boolean;
@@ -22,9 +26,13 @@ type Draft = {
   expectedCtc: string;
   expectedCurrency: string;
   noticePeriodDays: string;
+  compensationCurrent: string;
+  linkedinUrl: string;
+  portfolioUrl: string;
 };
 
 function buildDraft(p: EmployeeProfileApi): Draft {
+  const edu = p.education || [];
   return {
     displayName: p.displayName,
     headline: p.headline || '',
@@ -37,6 +45,14 @@ function buildDraft(p: EmployeeProfileApi): Draft {
       (p.experience || []).length > 0
         ? p.experience.map((e) => ({ ...e }))
         : [{ title: '', company: '', years: 0 }],
+    education:
+      edu.length > 0
+        ? edu.map((e) => ({
+            degree: e.degree || '',
+            institution: e.institution || '',
+            yearEnd: e.yearEnd != null ? String(e.yearEnd) : '',
+          }))
+        : [{ degree: '', institution: '', yearEnd: '' }],
     bannerUrl: p.bannerUrl || '',
     photoURL: p.photoURL || '',
     openToWork: Boolean(p.openToWork),
@@ -44,6 +60,9 @@ function buildDraft(p: EmployeeProfileApi): Draft {
     expectedCtc: String(p.expectedCtc ?? 0),
     expectedCurrency: p.expectedCurrency || 'USD',
     noticePeriodDays: String(p.noticePeriodDays ?? 30),
+    compensationCurrent: String(p.compensation?.current ?? 0),
+    linkedinUrl: p.linkedinUrl || '',
+    portfolioUrl: p.portfolioUrl || '',
   };
 }
 
@@ -125,6 +144,21 @@ export default function EmployeeProfile() {
           company: e.company.trim(),
           years: Math.min(60, Math.max(0, Math.floor(Number(e.years) || 0))),
         }));
+      const education = draft.education
+        .filter((e) => e.degree.trim() && e.institution.trim())
+        .map((e) => {
+          const ye = e.yearEnd.trim();
+          const y = ye ? parseInt(ye, 10) : NaN;
+          const row: { degree: string; institution: string; yearEnd?: number } = {
+            degree: e.degree.trim(),
+            institution: e.institution.trim(),
+          };
+          if (!Number.isNaN(y) && y >= 1950 && y <= 2035) row.yearEnd = y;
+          return row;
+        });
+
+      const currency = draft.expectedCurrency.trim().toUpperCase() || 'USD';
+      const expected = Number(draft.expectedCtc || 0);
       await patchEmployeeProfile({
         displayName: draft.displayName.trim() || profile.displayName,
         headline: draft.headline.trim(),
@@ -134,13 +168,21 @@ export default function EmployeeProfile() {
         yearsExperience: Math.min(60, Math.max(0, Math.floor(Number(draft.yearsExperience) || 0))),
         skills: parseSkillsText(draft.skillsText),
         experience: exp,
+        education,
         bannerUrl: draft.bannerUrl.trim() || undefined,
         photoURL: draft.photoURL.trim() || undefined,
         openToWork: draft.openToWork,
         openToWorkVisibility: draft.openToWorkVisibility,
-        expectedCtc: Number(draft.expectedCtc || 0),
-        expectedCurrency: draft.expectedCurrency.trim().toUpperCase() || 'USD',
+        expectedCtc: expected,
+        expectedCurrency: currency,
         noticePeriodDays: Number(draft.noticePeriodDays || 0),
+        compensation: {
+          current: Number(draft.compensationCurrent || 0),
+          expected,
+          currency,
+        },
+        linkedinUrl: draft.linkedinUrl.trim() || undefined,
+        portfolioUrl: draft.portfolioUrl.trim() || undefined,
       });
       setEditing(false);
       await load();
@@ -183,12 +225,28 @@ export default function EmployeeProfile() {
     });
   };
 
+  const addEducationRow = () => {
+    setDraft((d) => (d ? { ...d, education: [...d.education, { degree: '', institution: '', yearEnd: '' }] } : d));
+  };
+
+  const removeEducationRow = (index: number) => {
+    setDraft((d) => {
+      if (!d) return d;
+      const next = d.education.filter((_, i) => i !== index);
+      return { ...d, education: next.length ? next : [{ degree: '', institution: '', yearEnd: '' }] };
+    });
+  };
+
   if (loading) return <div className="dash-card"><p style={{ padding: 16 }}>Loading profile...</p></div>;
   if (error && !profile) return <div className="dash-card"><p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p></div>;
   if (!profile || !draft) return null;
 
   const display = editing ? draft : buildDraft(profile);
-  const aboutDisplay = profile.about?.trim() ? profile.about : profile.headline;
+  const aboutDisplay = profile.about?.trim()
+    ? profile.about
+    : profile.headline
+      ? profile.headline
+      : '';
 
   const initials = (editing ? draft.displayName : profile.displayName)
     .split(' ')
@@ -197,11 +255,14 @@ export default function EmployeeProfile() {
     .slice(0, 2)
     .toUpperCase();
 
-  const bannerStyle = display.bannerUrl
-    ? {
-        backgroundImage: `url(${display.bannerUrl})`,
-      }
-    : undefined;
+  const bannerStyle = display.bannerUrl ? { backgroundImage: `url(${display.bannerUrl})` } : undefined;
+
+  const field = (label: string, children: ReactNode) => (
+    <label className="emp-form-field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
 
   return (
     <>
@@ -211,8 +272,41 @@ export default function EmployeeProfile() {
         </div>
       )}
 
-      {/* Profile Header */}
+      <div className="dash-card" style={{ padding: '16px 20px' }}>
+        <h1 style={{ fontSize: 22, fontFamily: 'var(--font-display)', margin: 0 }}>Job seeker profile</h1>
+        <p className="emp-profile-section-hint" style={{ marginBottom: 0 }}>
+          Add the details recruiters and our matching engine use: headline, skills, experience, salary band, and availability—not company-style fields.
+        </p>
+      </div>
+
       <div className="dash-card">
+        <h2 className="emp-section-title">Profile strength</h2>
+        <div className="dash-card-body" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <strong>{profileStrength}% complete</strong>
+            <span style={{ color: 'var(--color-on-surface-variant)', fontSize: 12 }}>Stronger profiles get better matches</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ width: `${profileStrength}%`, height: '100%', background: 'linear-gradient(90deg,#50fa7b,#d4af37)' }} />
+          </div>
+          {suggestions.length > 0 && (
+            <ul style={{ marginTop: 12, paddingLeft: 18, color: 'var(--color-on-surface-variant)' }}>
+              {suggestions.slice(0, 5).map((item) => (
+                <li key={item} style={{ marginBottom: 6 }}>
+                  {item}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Banner & photo */}
+      <div className="dash-card">
+        <h2 className="emp-section-title">Photo & banner</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Optional cover image and profile photo—shown on your profile when recruiters view your profile.
+        </p>
         <div className="emp-profile-banner" style={bannerStyle}>
           {display.photoURL ? (
             <div className="emp-profile-avatar-lg">
@@ -227,7 +321,7 @@ export default function EmployeeProfile() {
                 type="button"
                 className="emp-edit-overlay-btn banner"
                 onClick={() => bannerInputRef.current?.click()}
-                title="Update banner image"
+                title="Change banner"
               >
                 <span className="material-symbols-outlined">edit</span>
               </button>
@@ -235,7 +329,7 @@ export default function EmployeeProfile() {
                 type="button"
                 className="emp-edit-overlay-btn logo"
                 onClick={() => logoInputRef.current?.click()}
-                title="Update profile photo"
+                title="Change profile photo"
               >
                 <span className="material-symbols-outlined">edit</span>
               </button>
@@ -257,78 +351,31 @@ export default function EmployeeProfile() {
           )}
         </div>
         <div className="emp-profile-info">
-          {editing ? (
-            <label style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Display name</span>
-              <input
-                className="glass-input"
-                value={draft.displayName}
-                onChange={(e) => patchDraft({ displayName: e.target.value })}
-              />
-            </label>
+          {!editing ? (
+            <>
+              <h1 className="emp-profile-name-lg">{profile.displayName}</h1>
+              <p className="emp-profile-headline">{profile.headline || 'Add a professional headline.'}</p>
+              <p className="emp-profile-location">
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>location_on</span>
+                {profile.location || 'Location not set'}
+                {profile.openToRelocation ? ' · Open to relocation' : ''}
+                {typeof profile.yearsExperience === 'number' ? ` · ${profile.yearsExperience} yrs experience` : ''}
+              </p>
+            </>
           ) : (
-            <h1 className="emp-profile-name-lg">{profile.displayName}</h1>
-          )}
-
-          {editing ? (
-            <label style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Professional headline</span>
-              <input
-                className="glass-input"
-                value={draft.headline}
-                onChange={(e) => patchDraft({ headline: e.target.value })}
-                placeholder="e.g. Senior Engineer · Product & Platform"
-              />
-            </label>
-          ) : (
-            <p className="emp-profile-headline">{profile.headline || 'Add a professional headline.'}</p>
-          )}
-
-          {editing ? (
-            <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Location</span>
-                <input className="glass-input" value={draft.location} onChange={(e) => patchDraft({ location: e.target.value })} />
-              </label>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={draft.openToRelocation}
-                  onChange={(e) => patchDraft({ openToRelocation: e.target.checked })}
-                />
-                Open to relocation
-              </label>
-              <label style={{ display: 'grid', gap: 6, maxWidth: 160 }}>
-                <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Total years experience</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={60}
-                  className="glass-input"
-                  value={draft.yearsExperience}
-                  onChange={(e) => patchDraft({ yearsExperience: Number(e.target.value) || 0 })}
-                />
-              </label>
-            </div>
-          ) : (
-            <p className="emp-profile-location">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-                location_on
-              </span>
-              {profile.location || 'Location not set'} {profile.openToRelocation ? '· Open to relocation' : ''}
-              {typeof profile.yearsExperience === 'number' ? ` · ${profile.yearsExperience} yrs experience` : ''}
+            <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)' }}>
+              Edit your headline, summary, and job-search fields in the sections below, then save.
             </p>
           )}
-
           <div className="emp-profile-actions">
             {!editing ? (
               <button className="btn btn-primary" style={{ fontSize: 13, padding: '8px 20px' }} onClick={startEdit}>
-                Edit Profile
+                Edit profile
               </button>
             ) : (
               <>
-                <button className="btn btn-primary" style={{ fontSize: 13, padding: '8px 20px' }} onClick={save} disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
+                <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 20px' }} onClick={save} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save changes'}
                 </button>
                 <button
                   type="button"
@@ -345,124 +392,193 @@ export default function EmployeeProfile() {
                 </button>
               </>
             )}
-            <button className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 20px' }} onClick={load} disabled={saving}>
+            <button className="btn btn-ghost" style={{ fontSize: 13, padding: '8px 20px' }} onClick={load} disabled={saving}>
               Refresh
             </button>
           </div>
         </div>
       </div>
 
-      {/* About */}
+      {/* Core job-search identity */}
       <div className="dash-card">
-        <h2 className="emp-section-title">About</h2>
-        <div className="dash-card-body">
+        <h2 className="emp-section-title">Core information</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Name and headline are used in search results and recruiter views.
+        </p>
+        <div style={{ padding: '8px 16px 16px' }}>
           {editing ? (
-            <textarea
-              className="glass-input"
-              style={{ width: '100%', minHeight: 140 }}
-              placeholder="Tell recruiters about your background, strengths, and goals..."
-              value={draft.about}
-              onChange={(e) => patchDraft({ about: e.target.value })}
-            />
+            <div className="emp-form-grid">
+              {field(
+                'Full name',
+                <input className="glass-input" value={draft.displayName} onChange={(e) => patchDraft({ displayName: e.target.value })} />
+              )}
+              {field(
+                'Professional headline',
+                <input
+                  className="glass-input"
+                  value={draft.headline}
+                  onChange={(e) => patchDraft({ headline: e.target.value })}
+                  placeholder="e.g. Senior Full Stack Engineer · React / Node"
+                />
+              )}
+              {field(
+                'City / region',
+                <input className="glass-input" value={draft.location} onChange={(e) => patchDraft({ location: e.target.value })} />
+              )}
+              {field(
+                'Total years of experience',
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  className="glass-input"
+                  value={draft.yearsExperience}
+                  onChange={(e) => patchDraft({ yearsExperience: Number(e.target.value) || 0 })}
+                />
+              )}
+            </div>
           ) : (
-            <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--color-on-surface)' }}>
-              {aboutDisplay || 'No summary yet. Click Edit Profile to add your story.'}
+            <div className="emp-form-grid">
+              <div className="emp-form-field">
+                <span>Full name</span>
+                <span style={{ fontSize: 15 }}>{profile.displayName}</span>
+              </div>
+              <div className="emp-form-field">
+                <span>Professional headline</span>
+                <span style={{ fontSize: 15 }}>{profile.headline || '—'}</span>
+              </div>
+              <div className="emp-form-field">
+                <span>City / region</span>
+                <span style={{ fontSize: 15 }}>{profile.location || '—'}</span>
+              </div>
+              <div className="emp-form-field">
+                <span>Total years of experience</span>
+                <span style={{ fontSize: 15 }}>{profile.yearsExperience ?? 0}</span>
+              </div>
+            </div>
+          )}
+          {editing ? (
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12 }}>
+              <input
+                type="checkbox"
+                checked={draft.openToRelocation}
+                onChange={(e) => patchDraft({ openToRelocation: e.target.checked })}
+              />
+              <span>Willing to relocate for the right role</span>
+            </label>
+          ) : (
+            <p style={{ fontSize: 13, marginTop: 12, color: 'var(--color-on-surface-variant)' }}>
+              Relocation: {profile.openToRelocation ? 'Yes, open to relocation' : 'Not indicated'}
             </p>
           )}
         </div>
       </div>
 
+      {/* Summary */}
       <div className="dash-card">
-        <h2 className="emp-section-title">Profile Strength</h2>
-        <div className="dash-card-body" style={{ padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <strong>{profileStrength}% complete</strong>
-            <span style={{ color: 'var(--color-on-surface-variant)', fontSize: 12 }}>Improve visibility with suggestions</span>
-          </div>
-          <div style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-            <div style={{ width: `${profileStrength}%`, height: '100%', background: 'linear-gradient(90deg,#50fa7b,#d4af37)' }} />
-          </div>
-          {suggestions.length > 0 && (
-            <ul style={{ marginTop: 12, paddingLeft: 18, color: 'var(--color-on-surface-variant)' }}>
-              {suggestions.slice(0, 4).map((item) => (
-                <li key={item} style={{ marginBottom: 6 }}>
-                  {item}
-                </li>
-              ))}
-            </ul>
+        <h2 className="emp-section-title">Professional summary</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          A short story about your impact, domains, and what you want next—separate from your one-line headline.
+        </p>
+        <div className="dash-card-body">
+          {editing ? (
+            <textarea
+              className="glass-input"
+              style={{ width: '100%', minHeight: 140 }}
+              placeholder="Summarize your background, strengths, and what you're looking for in your next role..."
+              value={draft.about}
+              onChange={(e) => patchDraft({ about: e.target.value })}
+            />
+          ) : (
+            <p style={{ fontSize: 14, lineHeight: 1.7, color: 'var(--color-on-surface)' }}>
+              {aboutDisplay || 'No summary yet. Tell recruiters what you bring and what role you want.'}
+            </p>
           )}
         </div>
       </div>
 
+      {/* Compensation */}
       <div className="dash-card">
-        <h2 className="emp-section-title">Visibility & Availability</h2>
-        <div className="dash-card-body" style={{ padding: 16, display: 'grid', gap: 12 }}>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="checkbox"
-              checked={draft.openToWork}
-              disabled={!editing}
-              onChange={(e) => patchDraft({ openToWork: e.target.checked })}
-            />
-            Open to work
-          </label>
-          <label style={{ display: 'grid', gap: 4, maxWidth: 300 }}>
-            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Open-to-work visibility</span>
-            <select
-              className="glass-input"
-              disabled={!editing}
-              value={draft.openToWorkVisibility}
-              onChange={(e) => patchDraft({ openToWorkVisibility: e.target.value as 'RECRUITERS_ONLY' | 'PRIVATE' })}
-            >
-              <option value="RECRUITERS_ONLY">Recruiters only</option>
-              <option value="PRIVATE">Private</option>
-            </select>
-          </label>
-          <div style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>
-            Shareable profile URL (employers/admins): {publicProfileUrl}
+        <h2 className="emp-section-title">Salary & notice</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Used to soft-filter roles that don’t fit your band and to set recruiter expectations (currency applies to all amounts below).
+        </p>
+        <div style={{ padding: '8px 16px 16px' }}>
+          <div className="emp-form-grid">
+            {editing ? (
+              <>
+                {field(
+                  'Current annual compensation (optional)',
+                  <input
+                    className="glass-input"
+                    inputMode="decimal"
+                    value={draft.compensationCurrent}
+                    onChange={(e) => patchDraft({ compensationCurrent: e.target.value })}
+                    placeholder="0"
+                  />
+                )}
+                {field(
+                  'Expected annual (CTC)',
+                  <input
+                    className="glass-input"
+                    inputMode="decimal"
+                    value={draft.expectedCtc}
+                    onChange={(e) => patchDraft({ expectedCtc: e.target.value })}
+                  />
+                )}
+                {field(
+                  'Currency',
+                  <input
+                    className="glass-input"
+                    value={draft.expectedCurrency}
+                    onChange={(e) => patchDraft({ expectedCurrency: e.target.value })}
+                    placeholder="INR / USD"
+                  />
+                )}
+                {field(
+                  'Notice period (days)',
+                  <input
+                    className="glass-input"
+                    inputMode="numeric"
+                    value={draft.noticePeriodDays}
+                    onChange={(e) => patchDraft({ noticePeriodDays: e.target.value })}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <div className="emp-form-field">
+                  <span>Current annual (optional)</span>
+                  <span>
+                    {profile.compensation?.current != null && profile.compensation.current > 0
+                      ? `${profile.compensation.current} ${profile.compensation.currency || profile.expectedCurrency || 'USD'}`
+                      : '—'}
+                  </span>
+                </div>
+                <div className="emp-form-field">
+                  <span>Expected CTC</span>
+                  <span>
+                    {(profile.expectedCtc ?? 0) > 0
+                      ? `${profile.expectedCtc} ${profile.expectedCurrency || 'USD'}`
+                      : '—'}
+                  </span>
+                </div>
+                <div className="emp-form-field">
+                  <span>Notice period</span>
+                  <span>{profile.noticePeriodDays != null ? `${profile.noticePeriodDays} days` : '—'}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Work history */}
       <div className="dash-card">
-        <h2 className="emp-section-title">Salary Expectations</h2>
-        <div
-          className="dash-card-body"
-          style={{ padding: 16, display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}
-        >
-          <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Expected CTC</span>
-            <input
-              className="glass-input"
-              disabled={!editing}
-              value={draft.expectedCtc}
-              onChange={(e) => patchDraft({ expectedCtc: e.target.value })}
-            />
-          </label>
-          <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Currency</span>
-            <input
-              className="glass-input"
-              disabled={!editing}
-              value={draft.expectedCurrency}
-              onChange={(e) => patchDraft({ expectedCurrency: e.target.value })}
-            />
-          </label>
-          <label style={{ display: 'grid', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Notice period (days)</span>
-            <input
-              className="glass-input"
-              disabled={!editing}
-              value={draft.noticePeriodDays}
-              onChange={(e) => patchDraft({ noticePeriodDays: e.target.value })}
-            />
-          </label>
-        </div>
-      </div>
-
-      {/* Experience */}
-      <div className="dash-card">
-        <h2 className="emp-section-title">Experience</h2>
+        <h2 className="emp-section-title">Work history</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Roles you’ve held—title, employer, and approximate duration in years.
+        </p>
         {editing ? (
           <div style={{ padding: '8px 16px 16px', display: 'grid', gap: 12 }}>
             {draft.experience.map((exp, i) => (
@@ -476,8 +592,8 @@ export default function EmployeeProfile() {
                 }}
               >
                 <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
-                  <label style={{ display: 'grid', gap: 4 }}>
-                    <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Title</span>
+                  <label className="emp-form-field">
+                    <span>Job title</span>
                     <input
                       className="glass-input"
                       value={exp.title}
@@ -488,8 +604,8 @@ export default function EmployeeProfile() {
                       }}
                     />
                   </label>
-                  <label style={{ display: 'grid', gap: 4 }}>
-                    <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Company</span>
+                  <label className="emp-form-field">
+                    <span>Company</span>
                     <input
                       className="glass-input"
                       value={exp.company}
@@ -502,8 +618,8 @@ export default function EmployeeProfile() {
                   </label>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'end' }}>
-                  <label style={{ display: 'grid', gap: 4, width: 100 }}>
-                    <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Years</span>
+                  <label className="emp-form-field" style={{ width: 100 }}>
+                    <span>Years</span>
                     <input
                       type="number"
                       min={0}
@@ -524,7 +640,7 @@ export default function EmployeeProfile() {
               </div>
             ))}
             <button type="button" className="btn btn-ghost" onClick={addExperienceRow} style={{ justifySelf: 'start' }}>
-              + Add experience
+              + Add role
             </button>
           </div>
         ) : (
@@ -540,26 +656,114 @@ export default function EmployeeProfile() {
               </div>
             ))}
             {(profile.experience || []).length === 0 && (
-              <p style={{ padding: '0 16px 16px', color: 'var(--color-on-surface-variant)' }}>No experience added yet.</p>
+              <p style={{ padding: '0 16px 16px', color: 'var(--color-on-surface-variant)' }}>No roles added yet.</p>
             )}
           </>
         )}
       </div>
 
+      {/* Education */}
+      <div className="dash-card">
+        <h2 className="emp-section-title">Education</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Degree, school, and graduation year help credibility and some recruiter filters.
+        </p>
+        {editing ? (
+          <div style={{ padding: '8px 16px 16px', display: 'grid', gap: 12 }}>
+            {draft.education.map((row, i) => (
+              <div
+                key={i}
+                style={{
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  paddingBottom: 12,
+                  display: 'grid',
+                  gap: 10,
+                }}
+              >
+                <div className="emp-form-grid">
+                  <label className="emp-form-field">
+                    <span>Degree / qualification</span>
+                    <input
+                      className="glass-input"
+                      value={row.degree}
+                      onChange={(e) => {
+                        const next = [...draft.education];
+                        next[i] = { ...next[i], degree: e.target.value };
+                        patchDraft({ education: next });
+                      }}
+                      placeholder="e.g. B.Tech Computer Science"
+                    />
+                  </label>
+                  <label className="emp-form-field">
+                    <span>Institution</span>
+                    <input
+                      className="glass-input"
+                      value={row.institution}
+                      onChange={(e) => {
+                        const next = [...draft.education];
+                        next[i] = { ...next[i], institution: e.target.value };
+                        patchDraft({ education: next });
+                      }}
+                    />
+                  </label>
+                  <label className="emp-form-field">
+                    <span>Year completed (optional)</span>
+                    <input
+                      className="glass-input"
+                      inputMode="numeric"
+                      value={row.yearEnd}
+                      onChange={(e) => {
+                        const next = [...draft.education];
+                        next[i] = { ...next[i], yearEnd: e.target.value };
+                        patchDraft({ education: next });
+                      }}
+                      placeholder="2024"
+                    />
+                  </label>
+                </div>
+                <button type="button" className="btn btn-ghost" style={{ justifySelf: 'start' }} onClick={() => removeEducationRow(i)}>
+                  Remove
+                </button>
+              </div>
+            ))}
+            <button type="button" className="btn btn-ghost" onClick={addEducationRow} style={{ justifySelf: 'start' }}>
+              + Add education
+            </button>
+          </div>
+        ) : (
+          <div style={{ padding: '0 16px 16px' }}>
+            {(profile.education || []).length > 0 ? (
+              (profile.education || []).map((ed, i) => (
+                <div key={i} className="emp-exp-item">
+                  <div className="emp-exp-logo">🎓</div>
+                  <div>
+                    <p className="emp-exp-title">{ed.degree}</p>
+                    <p className="emp-exp-company">{ed.institution}</p>
+                    {ed.yearEnd != null ? <p className="emp-exp-dates">{ed.yearEnd}</p> : null}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ color: 'var(--color-on-surface-variant)' }}>No education added yet.</p>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Skills */}
       <div className="dash-card">
-        <h2 className="emp-section-title">Skills & Expertise</h2>
+        <h2 className="emp-section-title">Skills & keywords</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Technical and soft skills used for matching and recruiter search—one per line or comma-separated.
+        </p>
         {editing ? (
           <div style={{ padding: '8px 16px 16px' }}>
-            <label style={{ display: 'grid', gap: 8 }}>
-              <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>One skill per line (or comma-separated)</span>
-              <textarea
-                className="glass-input"
-                style={{ width: '100%', minHeight: 120 }}
-                value={draft.skillsText}
-                onChange={(e) => patchDraft({ skillsText: e.target.value })}
-              />
-            </label>
+            <textarea
+              className="glass-input"
+              style={{ width: '100%', minHeight: 120 }}
+              value={draft.skillsText}
+              onChange={(e) => patchDraft({ skillsText: e.target.value })}
+            />
           </div>
         ) : (
           <div className="emp-skills-grid">
@@ -569,16 +773,103 @@ export default function EmployeeProfile() {
               </span>
             ))}
             {(profile.skills || []).length === 0 && (
-              <p style={{ color: 'var(--color-on-surface-variant)' }}>No skills added yet.</p>
+              <p style={{ color: 'var(--color-on-surface-variant)' }}>No skills listed.</p>
             )}
           </div>
         )}
       </div>
 
-      {/* Education */}
+      {/* Links */}
       <div className="dash-card">
-        <h2 className="emp-section-title">Education</h2>
-        <p style={{ color: 'var(--color-on-surface-variant)' }}>Education can be added in a later profile version.</p>
+        <h2 className="emp-section-title">Online presence</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          LinkedIn and portfolio or personal site—optional but recommended.
+        </p>
+        <div style={{ padding: '8px 16px 16px' }}>
+          <div className="emp-form-grid">
+            {editing ? (
+              <>
+                {field(
+                  'LinkedIn profile URL',
+                  <input
+                    className="glass-input"
+                    type="url"
+                    value={draft.linkedinUrl}
+                    onChange={(e) => patchDraft({ linkedinUrl: e.target.value })}
+                    placeholder="https://linkedin.com/in/..."
+                  />
+                )}
+                {field(
+                  'Portfolio or website',
+                  <input
+                    className="glass-input"
+                    type="url"
+                    value={draft.portfolioUrl}
+                    onChange={(e) => patchDraft({ portfolioUrl: e.target.value })}
+                    placeholder="https://"
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                <div className="emp-form-field">
+                  <span>LinkedIn</span>
+                  {profile.linkedinUrl ? (
+                    <a href={profile.linkedinUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-container)' }}>
+                      {profile.linkedinUrl}
+                    </a>
+                  ) : (
+                    <span>—</span>
+                  )}
+                </div>
+                <div className="emp-form-field">
+                  <span>Portfolio / website</span>
+                  {profile.portfolioUrl ? (
+                    <a href={profile.portfolioUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--color-primary-container)' }}>
+                      {profile.portfolioUrl}
+                    </a>
+                  ) : (
+                    <span>—</span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Visibility */}
+      <div className="dash-card">
+        <h2 className="emp-section-title">Job search visibility</h2>
+        <p className="emp-profile-section-hint" style={{ padding: '0 16px' }}>
+          Control whether recruiters see that you’re open to work. Link is only for employer and admin accounts.
+        </p>
+        <div className="dash-card-body" style={{ padding: 16, display: 'grid', gap: 12 }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="checkbox"
+              checked={draft.openToWork}
+              disabled={!editing}
+              onChange={(e) => patchDraft({ openToWork: e.target.checked })}
+            />
+            Open to new opportunities
+          </label>
+          <label style={{ display: 'grid', gap: 4, maxWidth: 320 }}>
+            <span style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Who can see open-to-work</span>
+            <select
+              className="glass-input"
+              disabled={!editing}
+              value={draft.openToWorkVisibility}
+              onChange={(e) => patchDraft({ openToWorkVisibility: e.target.value as 'RECRUITERS_ONLY' | 'PRIVATE' })}
+            >
+              <option value="RECRUITERS_ONLY">Recruiters on HireMeBharat only</option>
+              <option value="PRIVATE">Hidden (private)</option>
+            </select>
+          </label>
+          <div style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>
+            Recruiter profile link: <span style={{ wordBreak: 'break-all' }}>{publicProfileUrl}</span>
+          </div>
+        </div>
       </div>
     </>
   );

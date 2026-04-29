@@ -264,6 +264,37 @@
   transform: scale(1.05);
 }
 
+/* Job seeker profile form (aligned with dashboard form density) */
+.emp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.emp-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.emp-form-field > span:first-child {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+}
+
+.emp-profile-section-hint {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  margin: -4px 0 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .emp-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Profile Page */ 
 .emp-profile-banner {
   height: 180px;

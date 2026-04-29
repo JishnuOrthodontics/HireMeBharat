@@ -29,6 +29,13 @@ const profileUpdateSchema = z.object({
   publicProfileSlug: z.string().trim().min(3).max(120).optional(),
   photoURL: z.string().max(2_500_000).optional(),
   bannerUrl: z.string().max(2_500_000).optional(),
+  education: z.array(z.object({
+    degree: z.string().min(1).max(160),
+    institution: z.string().min(1).max(200),
+    yearEnd: z.number().int().min(1950).max(2035).optional(),
+  })).max(20).optional(),
+  linkedinUrl: z.string().max(500).optional(),
+  portfolioUrl: z.string().max(500).optional(),
 });
 
 const matchesQuerySchema = z.object({
@@ -76,6 +83,7 @@ function buildProfileStrength(input: {
   about?: string;
   skills?: string[];
   experience?: Array<{ years?: number }>;
+  education?: Array<{ degree?: string }>;
   expectedCtc?: number;
   expectedCurrency?: string;
   noticePeriodDays?: number;
@@ -112,6 +120,10 @@ function buildProfileStrength(input: {
   if (input.openToWork && String(input.openToWorkVisibility || '') === 'RECRUITERS_ONLY') score += 10;
   else suggestions.push('Enable open-to-work for recruiter visibility.');
 
+  if (!(input.education || []).filter((e) => String(e?.degree || '').trim()).length) {
+    suggestions.push('Add your education (degree and institution).');
+  }
+
   return { score: Math.max(0, Math.min(100, score)), suggestions };
 }
 
@@ -145,6 +157,9 @@ export async function employeeRoutes(app: FastifyInstance) {
           yearsExperience: Number(profileDoc?.yearsExperience || 0),
           skills: Array.isArray(profileDoc?.skills) ? profileDoc.skills : [],
           experience: Array.isArray(profileDoc?.experience) ? profileDoc.experience : [],
+          education: Array.isArray(profileDoc?.education) ? profileDoc.education : [],
+          linkedinUrl: profileDoc?.linkedinUrl || '',
+          portfolioUrl: profileDoc?.portfolioUrl || '',
           openToWork,
           expectedCtc: Number(profileDoc?.expectedCtc || 0),
           expectedCurrency: profileDoc?.expectedCurrency || 'USD',
@@ -202,6 +217,9 @@ export async function employeeRoutes(app: FastifyInstance) {
       yearsExperience: profileDoc?.yearsExperience || 0,
       skills: Array.isArray(profileDoc?.skills) ? profileDoc!.skills : [],
       experience: Array.isArray(profileDoc?.experience) ? profileDoc!.experience : [],
+      education: Array.isArray(profileDoc?.education) ? profileDoc!.education : [],
+      linkedinUrl: profileDoc?.linkedinUrl || '',
+      portfolioUrl: profileDoc?.portfolioUrl || '',
       compensation: profileDoc?.compensation || { current: 0, expected: 0, currency: 'USD' },
       openToWork: Boolean(profileDoc?.openToWork),
       openToWorkVisibility: profileDoc?.openToWorkVisibility || 'RECRUITERS_ONLY',
@@ -273,6 +291,7 @@ export async function employeeRoutes(app: FastifyInstance) {
       about: profileDoc?.about,
       skills: Array.isArray(profileDoc?.skills) ? profileDoc.skills : [],
       experience: Array.isArray(profileDoc?.experience) ? profileDoc.experience : [],
+      education: Array.isArray(profileDoc?.education) ? profileDoc.education : [],
       expectedCtc: Number(profileDoc?.expectedCtc || 0),
       expectedCurrency: profileDoc?.expectedCurrency,
       noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),

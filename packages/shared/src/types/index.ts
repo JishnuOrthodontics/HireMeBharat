@@ -112,6 +112,13 @@ export interface CandidateProfile {
     company: string;
     years: number;
   }[];
+  education?: Array<{
+    degree: string;
+    institution: string;
+    yearEnd?: number;
+  }>;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
   compensation: {
     current: number;
     expected: number;
