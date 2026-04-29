@@ -100,6 +100,10 @@ export interface CandidateProfile {
   openToRelocation?: boolean;
   yearsExperience?: number;
   resumeUrl?: string;
+  /** Original filename when uploaded (for display). */
+  resumeFileName?: string;
+  /** When true, recruiters viewing your public profile may download the resume. */
+  resumeVisibleToRecruiters?: boolean;
   publicProfileSlug?: string;
   openToWork?: boolean;
   openToWorkVisibility?: 'RECRUITERS_ONLY' | 'PRIVATE';

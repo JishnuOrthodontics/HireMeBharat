@@ -6,6 +6,7 @@ import EmployeeMatches from './EmployeeMatches';
 import EmployeeConcierge from './EmployeeConcierge';
 import EmployeeNetwork from './EmployeeNetwork';
 import EmployeeProfile from './EmployeeProfile';
+import EmployeeResume from './EmployeeResume';
 import { getDashboardSummary, getEmployeeMatches, getEmployeeProfile, getNotifications } from '../../lib/employeeApi';
 import './Employee.css';
 
@@ -104,20 +105,6 @@ function EmployeeSkillAssessments() {
       <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
         Assessments are not enabled yet for your account. This section is ready and will show available tests once enabled.
       </p>
-    </div>
-  );
-}
-
-function EmployeeResume() {
-  return (
-    <div className="dash-card dash-card-padded">
-      <h2 className="dash-card-title">My Resume</h2>
-      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
-        Resume tools are being rolled out. For now, update your profile headline/experience in Profile to improve matching.
-      </p>
-      <Link to="/employee/profile" className="btn btn-primary" style={{ marginTop: 16, display: 'inline-flex' }}>
-        Open Profile
-      </Link>
     </div>
   );
 }

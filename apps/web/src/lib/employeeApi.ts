@@ -58,6 +58,11 @@ export interface EmployeeProfileApi {
   expectedCtc?: number;
   expectedCurrency?: string;
   noticePeriodDays?: number;
+  /** HTTPS URL to PDF/DOC (Firebase Storage or external). */
+  resumeUrl?: string;
+  resumeFileName?: string;
+  resumeVisibleToRecruiters?: boolean;
+  resumeUpdatedAt?: string | null;
   updatedAt?: string | null;
 }
 
@@ -98,6 +103,8 @@ export interface EmployeePublicProfileApi {
   expectedCurrency: string;
   noticePeriodDays: number;
   publicProfileUrl: string;
+  /** Present when the candidate allows resume download for recruiters. */
+  resume: { url: string; fileName: string } | null;
   updatedAt?: string | null;
 }
 

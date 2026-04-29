@@ -85,6 +85,26 @@ export default function EmployeePublicProfile() {
         </div>
       ) : null}
 
+      {profile.resume ? (
+        <div className="dash-card">
+          <h2 className="emp-section-title">Resume</h2>
+          <div className="dash-card-body" style={{ padding: '0 16px 16px' }}>
+            <a
+              href={profile.resume.url}
+              target="_blank"
+              rel="noreferrer"
+              className="btn btn-primary"
+              download={profile.resume.fileName}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                download
+              </span>
+              Download {profile.resume.fileName}
+            </a>
+          </div>
+        </div>
+      ) : null}
+
       {(profile.linkedinUrl || profile.portfolioUrl) ? (
         <div className="dash-card">
           <h2 className="emp-section-title">Links</h2>

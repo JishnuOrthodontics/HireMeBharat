@@ -36,6 +36,9 @@ const profileUpdateSchema = z.object({
   })).max(20).optional(),
   linkedinUrl: z.string().max(500).optional(),
   portfolioUrl: z.string().max(500).optional(),
+  resumeUrl: z.union([z.string().url().max(4000), z.literal('')]).optional(),
+  resumeFileName: z.union([z.string().max(255), z.literal('')]).optional(),
+  resumeVisibleToRecruiters: z.boolean().optional(),
 });
 
 const matchesQuerySchema = z.object({
@@ -89,6 +92,7 @@ function buildProfileStrength(input: {
   noticePeriodDays?: number;
   openToWork?: boolean;
   openToWorkVisibility?: string;
+  resumeUrl?: string;
 }) {
   let score = 0;
   const suggestions: string[] = [];
@@ -119,6 +123,9 @@ function buildProfileStrength(input: {
 
   if (input.openToWork && String(input.openToWorkVisibility || '') === 'RECRUITERS_ONLY') score += 10;
   else suggestions.push('Enable open-to-work for recruiter visibility.');
+
+  if (String(input.resumeUrl || '').trim().length > 0) score += 5;
+  else suggestions.push('Add a resume file or link on the My Resume page.');
 
   if (!(input.education || []).filter((e) => String(e?.degree || '').trim()).length) {
     suggestions.push('Add your education (degree and institution).');
@@ -166,6 +173,13 @@ export async function employeeRoutes(app: FastifyInstance) {
           noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
           publicProfileUrl: `/employee/view/${uid}`,
           updatedAt: toIso(profileDoc?.updatedAt || userDoc?.updatedAt),
+          resume:
+            profileDoc?.resumeUrl && profileDoc?.resumeVisibleToRecruiters === true
+              ? {
+                  url: String(profileDoc.resumeUrl),
+                  fileName: String(profileDoc.resumeFileName || 'Resume'),
+                }
+              : null,
         },
       });
     }
@@ -228,6 +242,10 @@ export async function employeeRoutes(app: FastifyInstance) {
       noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
       publicProfileSlug: profileDoc?.publicProfileSlug || uid,
       updatedAt: toIso(profileDoc?.updatedAt || userDoc?.updatedAt),
+      resumeUrl: profileDoc?.resumeUrl || '',
+      resumeFileName: profileDoc?.resumeFileName || '',
+      resumeVisibleToRecruiters: Boolean(profileDoc?.resumeVisibleToRecruiters),
+      resumeUpdatedAt: toIso(profileDoc?.resumeUpdatedAt),
     };
 
     return reply.send({ profile: result });
@@ -249,6 +267,16 @@ export async function employeeRoutes(app: FastifyInstance) {
     const profileUpdate = Object.fromEntries(
       Object.entries(profilePayload).filter(([, v]) => v !== undefined)
     ) as Record<string, unknown>;
+
+    if (payload.resumeUrl !== undefined) {
+      if (String(payload.resumeUrl).trim() === '') {
+        profileUpdate.resumeUrl = '';
+        profileUpdate.resumeFileName = '';
+        profileUpdate.resumeUpdatedAt = null;
+      } else {
+        profileUpdate.resumeUpdatedAt = now;
+      }
+    }
 
     await db.collection('candidate_profiles').updateOne(
       { userId: uid },
@@ -297,6 +325,7 @@ export async function employeeRoutes(app: FastifyInstance) {
       noticePeriodDays: Number(profileDoc?.noticePeriodDays || 0),
       openToWork: Boolean(profileDoc?.openToWork),
       openToWorkVisibility: String(profileDoc?.openToWorkVisibility || 'RECRUITERS_ONLY'),
+      resumeUrl: profileDoc?.resumeUrl ? String(profileDoc.resumeUrl) : '',
     });
     return reply.send({ profileStrength: strength.score, suggestions: strength.suggestions });
   });

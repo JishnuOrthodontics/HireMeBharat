@@ -542,3 +542,164 @@
   background: rgba(80, 250, 123, 0.1);
   color: var(--color-primary-container);
 }
+
+/* —— My Resume page —— */
+.emp-resume-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.emp-resume-lead {
+  margin-top: 8px;
+  color: var(--color-on-surface-variant);
+  line-height: 1.5;
+  max-width: 52rem;
+}
+
+.emp-resume-actions-top {
+  margin-top: 16px;
+}
+
+.emp-resume-error {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-default);
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  color: var(--color-error, #ff9e9e);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.emp-resume-card {
+  margin-top: 0;
+}
+
+.emp-resume-section-title {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.emp-resume-hint {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.emp-resume-current {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.emp-resume-filename {
+  font-weight: 600;
+  margin: 0;
+  word-break: break-all;
+}
+
+.emp-resume-meta {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  margin: 6px 0 0;
+}
+
+.emp-resume-current-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.emp-resume-drop {
+  margin-top: 8px;
+  padding: 28px 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.emp-resume-drop-active {
+  border-color: var(--color-primary-container);
+  background: rgba(80, 250, 123, 0.06);
+}
+
+.emp-resume-drop-icon {
+  font-size: 40px;
+  color: var(--color-on-surface-variant);
+  display: block;
+  margin: 0 auto 8px;
+}
+
+.emp-resume-drop p {
+  margin: 0 0 12px;
+  color: var(--color-on-surface-variant);
+  font-size: 14px;
+}
+
+.emp-resume-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.emp-resume-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-on-surface-variant);
+  margin-bottom: 6px;
+  margin-top: 12px;
+}
+
+.emp-resume-label:first-of-type {
+  margin-top: 0;
+}
+
+.emp-resume-input {
+  width: 100%;
+  max-width: 36rem;
+  padding: 10px 12px;
+  border-radius: var(--radius-default);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--color-on-surface);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.emp-resume-input:focus {
+  outline: none;
+  border-color: var(--color-primary-container);
+}
+
+.emp-resume-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.emp-resume-toggle input {
+  margin-top: 3px;
+  accent-color: var(--color-primary-container);
+}
+
+.emp-resume-muted {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  margin-top: 8px;
+}
