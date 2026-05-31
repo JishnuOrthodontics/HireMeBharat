@@ -242,10 +242,83 @@ export interface AdminPatchEscalationPayload {
 export interface Notification {
   _id?: string;
   userUid: string;
-  type: 'MATCH' | 'MESSAGE' | 'ESCALATION' | 'SYSTEM';
+  type: 'MATCH' | 'MESSAGE' | 'ESCALATION' | 'SYSTEM' | 'JOB_APPLICATION' | 'JOB_OFFER' | 'JOB_INTERVIEW';
   title: string;
   content: string;
   read: boolean;
+  createdAt: Date;
+}
+
+// ─── Job Portal Types ───────────────────────────────────────────────
+
+export type JobListingStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'FILLED' | 'CLOSED';
+export type JobApplicationStatus = 'PENDING' | 'REVIEWED' | 'SHORTLISTED' | 'INTERVIEW' | 'OFFERED' | 'REJECTED' | 'WITHDRAWN';
+export type OfferStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+
+export interface JobListing {
+  _id?: string;
+  employerUid: string;
+  requisitionId?: string;
+  title: string;
+  company: string;
+  companyLogoUrl?: string;
+  department: string;
+  location: string;
+  employmentType: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERNSHIP';
+  description: string;
+  requirements: string[];
+  benefits: string[];
+  salaryMin: number;
+  salaryMax: number;
+  salaryCurrency: string;
+  experienceMin: number;
+  experienceMax: number;
+  skills: string[];
+  status: JobListingStatus;
+  featured: boolean;
+  applicationCount: number;
+  viewCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  expiresAt?: Date;
+}
+
+export interface JobApplication {
+  _id?: string;
+  jobId: string;
+  applicantUid: string;
+  employerUid: string;
+  status: JobApplicationStatus;
+  coverLetter?: string;
+  resumeUrl?: string;
+  resumeFileName?: string;
+  appliedAt: Date;
+  reviewedAt?: Date;
+  updatedAt: Date;
+}
+
+export interface JobOffer {
+  _id?: string;
+  applicationId: string;
+  jobId: string;
+  applicantUid: string;
+  employerUid: string;
+  status: OfferStatus;
+  offerDetails: string;
+  salary: number;
+  salaryCurrency: string;
+  startDate?: Date;
+  expiresAt: Date;
+  createdAt: Date;
+  respondedAt?: Date;
+}
+
+export interface PlatformFeedback {
+  _id?: string;
+  userUid: string;
+  userRole: string;
+  rating: number;
+  feedback: string;
   createdAt: Date;
 }
 

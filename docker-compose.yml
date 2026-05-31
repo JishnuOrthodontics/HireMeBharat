@@ -20,11 +20,13 @@ services:
       - UPSTREAM_EMPLOYEE=http://api-employee:3003
       - UPSTREAM_EMPLOYER=http://api-employer:3004
       - UPSTREAM_ADMIN=http://api-admin:3005
+      - UPSTREAM_JOBS=http://api-jobs:3006
     depends_on:
       - api-auth
       - api-employee
       - api-employer
       - api-admin
+      - api-jobs
 
   # Auth Service (handles public routes)
   api-auth:
@@ -83,6 +85,22 @@ services:
       - "3005:3005"
     environment:
       - PORT=3005
+      - HOST=0.0.0.0
+      - NODE_ENV=development
+      - FRONTEND_URL=http://localhost:5173
+      - MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority&appName=HiremeApp
+      - MONGODB_DB=hiremebharat
+      - FIREBASE_PROJECT_ID=hiremeapp2026
+
+  # Jobs Service
+  api-jobs:
+    build:
+      context: ./apps/api-jobs
+      dockerfile: Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      - PORT=3006
       - HOST=0.0.0.0
       - NODE_ENV=development
       - FRONTEND_URL=http://localhost:5173

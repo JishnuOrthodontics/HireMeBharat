@@ -301,3 +301,46 @@ ID_TOKEN=<firebase-id-token> \
 bash scripts/ci/verify-employer-api.sh
 ```
 
+## 📋 Self-Service Job Portal System (`api-jobs`)
+
+layered on top of the existing concierge matching platform, this system adds a fully self-service job board allowing candidates to search/apply to jobs directly, employers to moderate listings and manage applicant pipelines, and admins to oversee all listings.
+
+### Microservice Architecture
+- **Port:** `3006` (Local development) / Upstream service `api-jobs`
+- **Orchestration:** Integrated into `docker-compose.yml` and `docker-compose.prod.yml`
+- **Routing:** Proxied via **API Gateway** (`api-gateway`) at `/api/jobs/*`
+
+### Cross-Functional Features
+
+#### 1. Public Job Board (No Authentication Required)
+- **Browse & Search:** `GET /api/jobs/listings` allows searching by keywords, location, employment type, salary range, and skills.
+- **Details:** `GET /api/jobs/listings/:id` displays complete job requirements, descriptions, and salary.
+
+#### 2. Candidate Job Seeker Workflows (`EMPLOYEE` Role)
+- **Apply to Jobs:** `POST /api/jobs/listings/:id/apply` allows candidates to attach a cover letter and select/upload their platform resume.
+- **Applications Tracking:** `GET /api/jobs/applications` tracks current applications along with a visual review status timeline.
+- **Job Offers:** `GET /api/jobs/offers` lets candidates accept or reject formal offers.
+- **Interviews:** `GET /api/jobs/interviews` tracks scheduled video interviews with links.
+- **Feedback:** `POST /api/jobs/feedback` allows employees to submit platform reviews.
+
+#### 3. Recruiter Workflows (`EMPLOYER` Role)
+- **Post & Moderate Listings:** `POST /api/jobs/listings` allows creating new job listings. Includes a highly premium **Promote Requisition** option to auto-populate job board fields from active concierge requisitions.
+- **Pipeline Review:** `GET /api/jobs/employer/applications` displays all direct applicants. Recruiters can review resumes and cover letters, then transition candidate status to Reviewed, Shortlisted, Interview, or Offered.
+- **Video Interviews:** Transitioning status to `INTERVIEW` automatically schedules a video interview, generates a meeting link, and adds it to both candidate and recruiter schedules.
+- **Dispatched Offers:** `POST /api/jobs/employer/offers` creates formal job offers with specific CTCs, start dates, and validity periods, and emails/notifies candidates.
+
+#### 4. Platform Oversight (`ADMIN` Role)
+- **Moderation:** `GET /api/jobs/admin/listings` lists all active, draft, and paused job listings for administrative moderation (Pause, Activate, Force Close).
+- **System Metrics:** `GET /api/jobs/admin/stats` tracks total listings, application rates (last 24h / 7d), offer acceptance ratios, and average ratings.
+
+### Database Schema (MongoDB Collections & Indexes)
+
+| Collection | Focus | Indexes |
+|---|---|---|
+| `job_listings` | Public job listings | `(status, createdAt)`, `(employerUid, status)`, `(skills)`, full-text index on `(title, description, company)` |
+| `job_applications` | Candidate applications | `(applicantUid, status)`, `(jobId, status)`, `(employerUid, status)`, unique `(jobId, applicantUid)` |
+| `job_offers` | Sent job offers | `(applicantUid, status)`, `(employerUid, status)` |
+| `job_interviews` | Candidate video interviews | `(applicantUid, scheduledAt)`, `(employerUid, scheduledAt)` |
+| `platform_feedback` | Rating reviews | `(userUid, createdAt)` |
+
+

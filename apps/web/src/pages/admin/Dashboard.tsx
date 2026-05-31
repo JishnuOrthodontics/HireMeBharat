@@ -17,12 +17,18 @@ import {
   type AdminUserApi,
   type AdminUserStatus,
 } from '../../lib/adminApi';
+import {
+  getAdminJobListings,
+  moderateJobListing,
+  getJobPortalStats,
+} from '../../lib/jobsApi';
 import './Admin.css';
 
 const navItems = [
   { icon: 'home', label: 'Home', path: '/admin' },
   { icon: 'group', label: 'Users', path: '/admin/users' },
   { icon: 'work', label: 'Requisitions', path: '/admin/requisitions' },
+  { icon: 'assignment', label: 'Job Portal', path: '/admin/job-portal' },
   { icon: 'flag', label: 'Escalations', path: '/admin/escalations', badge: 4 },
   { icon: 'analytics', label: 'Analytics', path: '/admin/analytics' },
 ];
@@ -469,6 +475,193 @@ function EscalationsPage() {
   );
 }
 
+function JobPortalPage() {
+  const [stats, setStats] = useState<any>(null);
+  const [rows, setRows] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busyId, setBusyId] = useState('');
+
+  // Filters
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [statsRes, listingsRes] = await Promise.all([
+        getJobPortalStats(),
+        getAdminJobListings({
+          status: statusFilter === 'ALL' ? undefined : statusFilter,
+          search: search.trim() || undefined,
+          limit: 50
+        })
+      ]);
+      setStats(statsRes.stats);
+      setRows(listingsRes.listings || []);
+      setTotal(listingsRes.total);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load job portal data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [statusFilter]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    loadData();
+  };
+
+  const handleModerate = async (id: string, newStatus: string) => {
+    setBusyId(id);
+    try {
+      await moderateJobListing(id, newStatus);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to moderate job listing');
+    } finally {
+      setBusyId('');
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Stats Summary Cards */}
+      {stats && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+          <div className="dash-card dash-card-padded" style={{ textAlign: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.03))' }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--color-primary-container)', fontSize: 28 }}>work</span>
+            <p style={{ fontSize: 24, fontWeight: 700, marginTop: 4, color: 'var(--color-primary-container)' }}>{stats.activeListings} / {stats.totalListings}</p>
+            <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)', marginTop: 2 }}>Active / Total Listings</p>
+          </div>
+          <div className="dash-card dash-card-padded" style={{ textAlign: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.03))' }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--color-secondary)', fontSize: 28 }}>groups</span>
+            <p style={{ fontSize: 24, fontWeight: 700, marginTop: 4, color: 'var(--color-secondary)' }}>{stats.totalApplications}</p>
+            <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)', marginTop: 2 }}>Total Applications</p>
+          </div>
+          <div className="dash-card dash-card-padded" style={{ textAlign: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.03))' }}>
+            <span className="material-symbols-outlined" style={{ color: '#ce93d8', fontSize: 28 }}>timeline</span>
+            <p style={{ fontSize: 24, fontWeight: 700, marginTop: 4, color: '#ce93d8' }}>+{stats.applications24h}</p>
+            <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)', marginTop: 2 }}>Applications (24h)</p>
+          </div>
+          <div className="dash-card dash-card-padded" style={{ textAlign: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.03))' }}>
+            <span className="material-symbols-outlined" style={{ color: 'var(--color-secondary)', fontSize: 28 }}>card_membership</span>
+            <p style={{ fontSize: 24, fontWeight: 700, marginTop: 4, color: 'var(--color-secondary)' }}>{stats.offerAcceptanceRate}%</p>
+            <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)', marginTop: 2 }}>Offer Acceptance Rate</p>
+          </div>
+          <div className="dash-card dash-card-padded" style={{ textAlign: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(168,85,247,0.03))' }}>
+            <span className="material-symbols-outlined" style={{ color: '#ffc107', fontSize: 28 }}>star</span>
+            <p style={{ fontSize: 24, fontWeight: 700, marginTop: 4, color: '#ffc107' }}>{stats.avgPlatformRating} / 5</p>
+            <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)', marginTop: 2 }}>Platform Rating</p>
+          </div>
+        </div>
+      )}
+
+      {/* Moderation Panel */}
+      <div className="dash-card">
+        <div className="dash-card-header" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifySelf: 'stretch', alignItems: 'center' }}>
+          <span className="dash-card-title" style={{ flex: 1 }}>Job Listings Moderation ({total})</span>
+          
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 8, flex: 1, minWidth: '240px' }}>
+            <input 
+              className="glass-input" 
+              placeholder="Search title, company..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)}
+              style={{ padding: '6px 12px', fontSize: 13 }}
+            />
+            <button type="submit" className="btn btn-gold" style={{ padding: '6px 14px', fontSize: 13 }}>
+              Search
+            </button>
+          </form>
+
+          <select 
+            className="glass-input"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            style={{ width: 'auto', padding: '6px 12px', fontSize: 13 }}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="DRAFT">Draft</option>
+            <option value="PAUSED">Paused</option>
+            <option value="FILLED">Filled</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+        </div>
+
+        {loading && <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>Loading listings...</p>}
+        {error && <p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p>}
+
+        {!loading && !error && rows.map(listing => (
+          <div key={listing.id} className="empr-activity-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="empr-activity-icon" style={{ background: 'rgba(255,255,255,0.03)' }}>
+              <span className="material-symbols-outlined">work</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p className="empr-activity-text" style={{ fontWeight: 600 }}>{listing.title}</p>
+                <span className={`dash-status ${listing.status?.toLowerCase() || 'draft'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                  {listing.status}
+                </span>
+              </div>
+              <p className="empr-activity-time">
+                Company: <strong>{listing.company}</strong> · Loc: {listing.location} · Created: {listing.createdAt ? new Date(listing.createdAt).toLocaleDateString() : 'N/A'}
+              </p>
+              <p className="empr-activity-time" style={{ marginTop: 2 }}>
+                Views: <strong>{listing.viewCount || 0}</strong> · Applications: <strong>{listing.applicationCount || 0}</strong>
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {listing.status === 'ACTIVE' && (
+                <button 
+                  className="btn btn-ghost" 
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  onClick={() => handleModerate(listing.id, 'PAUSED')}
+                  disabled={busyId === listing.id}
+                >
+                  Pause
+                </button>
+              )}
+              {listing.status === 'PAUSED' && (
+                <button 
+                  className="btn btn-ghost" 
+                  style={{ fontSize: 12, padding: '4px 10px' }}
+                  onClick={() => handleModerate(listing.id, 'ACTIVE')}
+                  disabled={busyId === listing.id}
+                >
+                  Activate
+                </button>
+              )}
+              {listing.status !== 'CLOSED' && (
+                <button 
+                  className="btn btn-ghost" 
+                  style={{ fontSize: 12, padding: '4px 10px', color: 'var(--color-error)' }}
+                  onClick={() => handleModerate(listing.id, 'CLOSED')}
+                  disabled={busyId === listing.id}
+                >
+                  Force Close
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {!loading && !error && rows.length === 0 && (
+          <p style={{ padding: 24, textAlign: 'center', color: 'var(--color-on-surface-variant)' }}>No listings found under this filter.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ComingSoon({ title }: { title: string }) {
   return (
     <div className="dash-card dash-card-padded">
@@ -531,6 +724,7 @@ export default function Dashboard() {
         <Route index element={<AdminFeed summary={summary} escalations={escalationsPreview} />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="escalations" element={<EscalationsPage />} />
+        <Route path="job-portal" element={<JobPortalPage />} />
         <Route path="requisitions" element={<ComingSoon title="Requisitions Oversight" />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="*" element={<AdminFeed summary={summary} escalations={escalationsPreview} />} />

@@ -36,5 +36,18 @@ export const API_PATHS = {
     ME: '/api/auth/me',
     NOTIFICATIONS: '/api/notifications',
   },
+  // Job Portal
+  JOBS: {
+    LISTINGS: '/api/jobs/listings',
+    SEARCH: '/api/jobs/search',
+    APPLICATIONS: '/api/jobs/applications',
+    OFFERS: '/api/jobs/offers',
+    INTERVIEWS: '/api/jobs/interviews',
+    FEEDBACK: '/api/jobs/feedback',
+    EMPLOYER_APPLICATIONS: '/api/jobs/employer/applications',
+    EMPLOYER_OFFERS: '/api/jobs/employer/offers',
+    ADMIN_LISTINGS: '/api/jobs/admin/listings',
+    ADMIN_STATS: '/api/jobs/admin/stats',
+  },
 } as const;
 

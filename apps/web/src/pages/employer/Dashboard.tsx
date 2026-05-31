@@ -5,6 +5,10 @@ import EmployerFeed from './EmployerFeed';
 import EmployerRequisitions from './EmployerRequisitions';
 import EmployerCandidates from './EmployerCandidates';
 import EmployerProfile from './EmployerProfile';
+import EmployerJobListings from './EmployerJobListings';
+import EmployerApplicationReview from './EmployerApplicationReview';
+import EmployerOfferManagement from './EmployerOfferManagement';
+import EmployerFeedback from './EmployerFeedback';
 import {
   getEmployerDashboardSummary,
   getEmployerProfile,
@@ -17,6 +21,10 @@ const navItems = [
   { icon: 'home', label: 'Home', path: '/employer' },
   { icon: 'work', label: 'Requisitions', path: '/employer/requisitions', badge: 2 },
   { icon: 'groups', label: 'Candidates', path: '/employer/candidates', badge: 8 },
+  { icon: 'assignment', label: 'Job Listings', path: '/employer/job-listings' },
+  { icon: 'rate_review', label: 'Applications', path: '/employer/applications' },
+  { icon: 'card_membership', label: 'Offers', path: '/employer/offers' },
+  { icon: 'reviews', label: 'Feedback', path: '/employer/feedback' },
   { icon: 'mail', label: 'Messages', path: '/employer/messages', badge: 1 },
   { icon: 'analytics', label: 'Analytics', path: '/employer/analytics' },
 ];
@@ -241,6 +249,10 @@ export default function Dashboard() {
         <Route index element={<EmployerFeed />} />
         <Route path="requisitions" element={<EmployerRequisitions />} />
         <Route path="candidates" element={<EmployerCandidates />} />
+        <Route path="job-listings" element={<EmployerJobListings />} />
+        <Route path="applications" element={<EmployerApplicationReview />} />
+        <Route path="offers" element={<EmployerOfferManagement />} />
+        <Route path="feedback" element={<EmployerFeedback />} />
         <Route path="messages" element={<ComingSoon title="Messages" />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="profile" element={<EmployerProfile />} />

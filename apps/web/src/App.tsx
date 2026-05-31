@@ -11,6 +11,8 @@ const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
 const SignIn = lazy(() => import('./pages/auth/SignIn'));
 const Register = lazy(() => import('./pages/auth/Register'));
 const RoleSelect = lazy(() => import('./pages/auth/RoleSelect'));
+const JobSearch = lazy(() => import('./pages/jobs/JobSearch'));
+const JobDetails = lazy(() => import('./pages/jobs/JobDetails'));
 
 // Lazy-loaded dashboard layouts
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -52,6 +54,8 @@ function App() {
               <Route path="/register" element={
                 <PublicOnlyGuard><Register /></PublicOnlyGuard>
               } />
+              <Route path="/jobs" element={<JobSearch />} />
+              <Route path="/jobs/:id" element={<JobDetails />} />
             </Route>
 
             {/* Role Selection (Google first-time users) */}

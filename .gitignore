@@ -7,3 +7,5 @@ dist/
 .DS_Store
 .vite/
 .ci_deploy_key
+deploy_key
+deploy_key.pub

@@ -19,6 +19,7 @@ const UPSTREAM_AUTH = process.env.UPSTREAM_AUTH ?? 'http://127.0.0.1:3002';
 const UPSTREAM_EMPLOYEE = process.env.UPSTREAM_EMPLOYEE ?? 'http://127.0.0.1:3003';
 const UPSTREAM_EMPLOYER = process.env.UPSTREAM_EMPLOYER ?? 'http://127.0.0.1:3004';
 const UPSTREAM_ADMIN = process.env.UPSTREAM_ADMIN ?? 'http://127.0.0.1:3005';
+const UPSTREAM_JOBS = process.env.UPSTREAM_JOBS ?? 'http://127.0.0.1:3006';
 
 /** @fastify/reply-from may drop `authorization` while handling Connection hop-by-hop headers — restore from inbound bearer (incl. X-Firebase-Authorization fallback). */
 function preserveInboundAuth(originalReq: FastifyRequest, headers: Record<string, unknown>) {
@@ -101,6 +102,26 @@ async function buildApp() {
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
       await app.requireRole('ADMIN')(request, reply);
+    }
+  });
+
+  // Job Portal — public listings (no auth, GET only)
+  // Registered BEFORE the authenticated /api/jobs/* proxy so GET requests pass through
+  await app.register(httpProxy as any, {
+    upstream: UPSTREAM_JOBS,
+    prefix: '/api/jobs/listings',
+    rewritePrefix: '/api/jobs/listings',
+    replyOptions: forwardAuthReplyOptions,
+  });
+
+  // Job Portal — authenticated routes (role checks handled inside api-jobs)
+  await app.register(httpProxy as any, {
+    upstream: UPSTREAM_JOBS,
+    prefix: '/api/jobs',
+    rewritePrefix: '/api/jobs',
+    replyOptions: forwardAuthReplyOptions,
+    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+      await app.authenticate(request, reply);
     }
   });
 

@@ -7,15 +7,20 @@ import EmployeeConcierge from './EmployeeConcierge';
 import EmployeeNetwork from './EmployeeNetwork';
 import EmployeeProfile from './EmployeeProfile';
 import EmployeeResume from './EmployeeResume';
+import EmployeeApplications from './EmployeeApplications';
+import EmployeeOffers from './EmployeeOffers';
+import EmployeeInterviews from './EmployeeInterviews';
+import EmployeeFeedback from './EmployeeFeedback';
 import { getDashboardSummary, getEmployeeMatches, getEmployeeProfile, getNotifications } from '../../lib/employeeApi';
 import './Employee.css';
 
 const navItems = [
   { icon: 'home', label: 'Home', path: '/employee' },
+  { icon: 'search', label: 'Jobs', path: '/jobs' },
   { icon: 'work', label: 'Matches', path: '/employee/matches', badge: 5 },
+  { icon: 'description', label: 'Applications', path: '/employee/applications' },
   { icon: 'support_agent', label: 'Concierge', path: '/employee/concierge', badge: 2 },
   { icon: 'group', label: 'Network', path: '/employee/network' },
-  { icon: 'mail', label: 'Messages', path: '/employee/messages', badge: 3 },
 ];
 
 /* ===== Left Sidebar ===== */
@@ -73,6 +78,18 @@ function LeftSidebar({ profile, activeMatches, interviews }: { profile: any; act
           <Link to="/employee/resume" className="dash-quick-link">
             <span className="material-symbols-outlined">description</span>
             My Resume
+          </Link>
+          <Link to="/employee/offers" className="dash-quick-link">
+            <span className="material-symbols-outlined">card_giftcard</span>
+            Job Offers
+          </Link>
+          <Link to="/employee/interviews" className="dash-quick-link">
+            <span className="material-symbols-outlined">event</span>
+            Interviews
+          </Link>
+          <Link to="/employee/feedback" className="dash-quick-link">
+            <span className="material-symbols-outlined">rate_review</span>
+            Feedback
           </Link>
           <Link to="/employee/settings" className="dash-quick-link">
             <span className="material-symbols-outlined">settings</span>
@@ -291,6 +308,10 @@ export default function Dashboard() {
         <Route path="market-insights" element={<EmployeeMarketInsights />} />
         <Route path="skill-assessments" element={<EmployeeSkillAssessments />} />
         <Route path="resume" element={<EmployeeResume />} />
+        <Route path="applications" element={<EmployeeApplications />} />
+        <Route path="offers" element={<EmployeeOffers />} />
+        <Route path="interviews" element={<EmployeeInterviews />} />
+        <Route path="feedback" element={<EmployeeFeedback />} />
         <Route path="settings" element={<EmployeeSettings />} />
         <Route path="*" element={<EmployeeFeed />} />
       </Routes>
