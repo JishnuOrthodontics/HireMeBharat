@@ -1,44 +1,4 @@
-import { auth } from './firebase';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-function bearerHeaders(token: string): Record<string, string> {
-  const bearer = `Bearer ${token}`;
-  return {
-    Authorization: bearer,
-    'X-Firebase-Authorization': bearer,
-  };
-}
-
-async function getToken() {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  return user.getIdToken();
-}
-
-async function authRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await getToken();
-  const headers = {
-    ...bearerHeaders(token),
-    ...(init.headers || {}),
-  };
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({} as any));
-    throw new Error(data.message || `Request failed (${response.status})`);
-  }
-  if (response.status === 204) return {} as T;
-  return response.json() as Promise<T>;
-}
-
-async function publicRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, init);
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({} as any));
-    throw new Error(data.message || `Request failed (${response.status})`);
-  }
-  return response.json() as Promise<T>;
-}
+import { authRequest, publicRequest } from './apiClient';
 
 // ─── Types ───────────────────────────────────────────────────────────
 

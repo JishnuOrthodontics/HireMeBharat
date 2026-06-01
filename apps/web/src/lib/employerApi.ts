@@ -1,35 +1,6 @@
-import { auth } from './firebase';
+import { authRequest } from './apiClient';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-function bearerHeaders(token: string): Record<string, string> {
-  const bearer = `Bearer ${token}`;
-  return {
-    Authorization: bearer,
-    'X-Firebase-Authorization': bearer,
-  };
-}
-
-async function getToken() {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
-  return user.getIdToken();
-}
-
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await getToken();
-  const headers = {
-    ...bearerHeaders(token),
-    ...(init.headers || {}),
-  };
-  const response = await fetch(`${API_URL}${path}`, { ...init, headers });
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({} as any));
-    throw new Error(data.message || `Request failed (${response.status})`);
-  }
-  if (response.status === 204) return {} as T;
-  return response.json() as Promise<T>;
-}
+const request = authRequest;
 
 export type EmployerRequisitionStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'FILLED' | 'CLOSED';
 export type EmployerCandidateStage = 'SOURCED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
