@@ -11,6 +11,7 @@ import EmployeeOffers from './EmployeeOffers';
 import EmployeeInterviews from './EmployeeInterviews';
 import EmployeeFeedback from './EmployeeFeedback';
 import { useEmployeeProfile, useEmployeeDashboardSummary, useNotifications, useEmployeeMatches } from '../../hooks/useEmployeeQueries';
+import { type EmployeeProfileApi } from '../../lib/employeeApi';
 import './Employee.css';
 
 const navItems = [
@@ -23,7 +24,7 @@ const navItems = [
 ];
 
 /* ===== Left Sidebar ===== */
-function LeftSidebar({ profile, activeMatches, interviews }: { profile: any; activeMatches: number; interviews: number }) {
+function LeftSidebar({ profile, activeMatches, interviews }: { profile: EmployeeProfileApi | null | undefined; activeMatches: number; interviews: number }) {
   const initials = (profile?.displayName || 'Employee')
     .split(' ')
     .map((s: string) => s[0])
