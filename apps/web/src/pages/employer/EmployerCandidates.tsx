@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   getEmployerCandidates,
   patchEmployerCandidateStage,
@@ -83,9 +84,22 @@ export default function EmployerCandidates() {
 
       {!loading && !error && rows.map((c) => (
         <div key={c.id} className="empr-cand-card">
-          <div className="empr-cand-avatar">{c.initials}</div>
+          <div className={`empr-cand-avatar ${c.isPremium ? 'premium-pulsing-avatar' : ''}`} style={{
+            position: 'relative',
+            border: c.isPremium ? '2px solid #d4af37' : undefined,
+            boxShadow: c.isPremium ? '0 0 8px rgba(212, 175, 85, 0.5)' : undefined
+          }}>{c.initials}</div>
           <div className="empr-cand-info">
-            <p className="empr-cand-name">{c.name}</p>
+            <p className="empr-cand-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Link to={`/employee/view/${c.employeeUid}`} style={{ color: 'inherit', textDecoration: 'none' }} className="cand-hover-link">
+                {c.name}
+              </Link>
+              {c.isPremium && (
+                <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#d4af37', verticalAlign: 'middle' }} title="Premium Candidate">
+                  workspace_premium
+                </span>
+              )}
+            </p>
             <p className="empr-cand-headline">{c.title}</p>
             <div className="empr-cand-skills">
               {c.skills.map(s => <span key={s} className="emp-match-tag">{s}</span>)}

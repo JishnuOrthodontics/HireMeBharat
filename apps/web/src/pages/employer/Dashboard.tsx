@@ -1,4 +1,4 @@
-import { Routes, Route, Link, Navigate } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import EmployerFeed from './EmployerFeed';
@@ -15,6 +15,8 @@ import {
   type EmployerProfileApi,
   type EmployerSummaryApi,
 } from '../../lib/employerApi';
+import BillingSettings from '../shared/BillingSettings';
+import Pricing from '../shared/Pricing';
 import './Employer.css';
 
 const navItems = [
@@ -90,6 +92,14 @@ function LeftSidebar({ profile, summary }: { profile: EmployerProfileApi | null;
           <Link to="/employer/messages" className="dash-quick-link">
             <span className="material-symbols-outlined">support_agent</span>
             Account Manager
+          </Link>
+          <Link to="/employer/pricing" className="dash-quick-link">
+            <span className="material-symbols-outlined">workspace_premium</span>
+            Pricing & Credits
+          </Link>
+          <Link to="/employer/settings" className="dash-quick-link">
+            <span className="material-symbols-outlined">settings</span>
+            Billing & Settings
           </Link>
         </div>
       </div>
@@ -254,7 +264,8 @@ export default function Dashboard() {
         <Route path="messages" element={<EmployerMessages />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="profile" element={<EmployerProfile />} />
-        <Route path="settings" element={<Navigate to="/employer/profile" replace />} />
+        <Route path="settings" element={<BillingSettings />} />
+        <Route path="pricing" element={<Pricing />} />
         <Route path="*" element={<EmployerFeed />} />
       </Routes>
     </DashboardLayout>

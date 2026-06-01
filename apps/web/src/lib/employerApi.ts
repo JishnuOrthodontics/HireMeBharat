@@ -20,10 +20,12 @@ export interface EmployerCandidateApi {
   stageLabel: string;
   createdAt?: string | null;
   updatedAt?: string | null;
+  isPremium?: boolean;
 }
 
 export interface EmployerMatchApi {
   candidateId: string;
+  employeeUid?: string;
   requisitionId: string;
   score: number;
   status: EmployerCandidateStage;
@@ -33,6 +35,7 @@ export interface EmployerMatchApi {
   compensation: string;
   roleTarget: string;
   updatedAt?: string | null;
+  isPremium?: boolean;
 }
 
 export interface EmployerProfileApi {

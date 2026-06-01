@@ -11,7 +11,8 @@
     "apps/api-employee",
     "apps/api-employer",
     "apps/api-admin",
-    "apps/api-jobs"
+    "apps/api-jobs",
+    "apps/api-billing"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
@@ -21,7 +22,8 @@
     "dev:employer": "npm run dev --workspace=apps/api-employer",
     "dev:admin": "npm run dev --workspace=apps/api-admin",
     "dev:jobs": "npm run dev --workspace=apps/api-jobs",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:employee\" \"npm run dev:employer\" \"npm run dev:admin\" \"npm run dev:jobs\"",
+    "dev:billing": "npm run dev --workspace=apps/api-billing",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:gateway\" \"npm run dev:auth\" \"npm run dev:employee\" \"npm run dev:employer\" \"npm run dev:admin\" \"npm run dev:jobs\" \"npm run dev:billing\"",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },

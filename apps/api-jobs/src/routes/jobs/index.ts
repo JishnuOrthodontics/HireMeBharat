@@ -529,6 +529,14 @@ export async function jobsRoutes(app: FastifyInstance) {
     const doc = await db.collection('job_listings').findOne({ _id: new ObjectId(id), status: 'ACTIVE' });
     if (!doc) return reply.code(404).send({ error: 'Not Found', message: 'Job listing not found' });
 
+    const subDoc = doc.employerUid
+      ? await db.collection('billing_subscriptions').findOne({
+          userUid: doc.employerUid,
+          plan: 'PRO',
+          expiresAt: { $gt: new Date() }
+        }).catch(() => null)
+      : null;
+
     // Increment view count (fire-and-forget)
     db.collection('job_listings').updateOne({ _id: new ObjectId(id) }, { $inc: { viewCount: 1 } }).catch(() => {});
 
@@ -557,6 +565,7 @@ export async function jobsRoutes(app: FastifyInstance) {
         viewCount: Number(doc.viewCount || 0),
         createdAt: toIso(doc.createdAt),
         updatedAt: toIso(doc.updatedAt),
+        companyIsPro: Boolean(subDoc),
       },
     });
   });

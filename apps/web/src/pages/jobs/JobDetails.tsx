@@ -106,7 +106,28 @@ export default function JobDetails() {
             </div>
             <div style={{ flex: 1 }}>
               <div className="job-detail-title">{listing.title}</div>
-              <div className="job-detail-company">{listing.company}</div>
+              <div className="job-detail-company" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {listing.company}
+                {listing.companyIsPro && (
+                  <span className="premium-badge-gold" style={{
+                    background: 'linear-gradient(135deg, #d4af37, #f9d976)',
+                    color: '#1a1a2e',
+                    fontSize: 9,
+                    fontWeight: 'bold',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase',
+                    boxShadow: '0 0 6px rgba(212, 175, 85, 0.3)',
+                    letterSpacing: '0.5px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 2
+                  }}>
+                    <span className="material-symbols-outlined" style={{ fontSize: 11 }}>workspace_premium</span>
+                    PRO
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

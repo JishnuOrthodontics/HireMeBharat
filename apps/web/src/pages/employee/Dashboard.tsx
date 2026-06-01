@@ -12,6 +12,8 @@ import EmployeeInterviews from './EmployeeInterviews';
 import EmployeeFeedback from './EmployeeFeedback';
 import { useEmployeeProfile, useEmployeeDashboardSummary, useNotifications, useEmployeeMatches, useConciergeMessages } from '../../hooks/useEmployeeQueries';
 import { type EmployeeProfileApi } from '../../lib/employeeApi';
+import BillingSettings from '../shared/BillingSettings';
+import Pricing from '../shared/Pricing';
 import './Employee.css';
 
 const navItems = [
@@ -139,14 +141,7 @@ function EmployeeSkillAssessments() {
 }
 
 function EmployeeSettings() {
-  return (
-    <div className="dash-card dash-card-padded">
-      <h2 className="dash-card-title">Preferences</h2>
-      <p style={{ marginTop: 8, color: 'var(--color-on-surface-variant)' }}>
-        Preference settings page is now connected. Profile and notification preferences will be added here.
-      </p>
-    </div>
-  );
+  return <BillingSettings />;
 }
 
 /* ===== Right Sidebar ===== */
@@ -337,6 +332,7 @@ export default function Dashboard() {
         <Route path="interviews" element={<EmployeeInterviews />} />
         <Route path="feedback" element={<EmployeeFeedback />} />
         <Route path="settings" element={<EmployeeSettings />} />
+        <Route path="pricing" element={<Pricing />} />
         <Route path="*" element={<EmployeeFeed />} />
       </Routes>
     </DashboardLayout>

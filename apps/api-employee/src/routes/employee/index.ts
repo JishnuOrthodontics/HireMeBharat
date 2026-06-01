@@ -152,14 +152,17 @@ export async function employeeRoutes(app: FastifyInstance) {
       const db = app.mongo?.db;
       if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
-      const [userDoc, profileDoc] = await Promise.all([
+      const [userDoc, profileDoc, subDoc] = await Promise.all([
         db.collection('users').findOne({ uid, role: 'EMPLOYEE' }),
         db.collection('candidate_profiles').findOne({ userId: uid }),
+        db.collection('billing_subscriptions').findOne({ userUid: uid }),
       ]);
       if (!userDoc) return reply.code(404).send({ error: 'Not Found', message: 'Employee not found' });
 
       const visibility = String(profileDoc?.openToWorkVisibility || 'RECRUITERS_ONLY');
       const openToWork = Boolean(profileDoc?.openToWork) && visibility === 'RECRUITERS_ONLY';
+      const isPremium = Boolean(subDoc && subDoc.plan === 'PREMIUM' && new Date(subDoc.expiresAt) > new Date());
+
       return reply.send({
         profile: {
           uid,
@@ -188,6 +191,7 @@ export async function employeeRoutes(app: FastifyInstance) {
                   fileName: String(profileDoc.resumeFileName || 'Resume'),
                 }
               : null,
+          isPremium,
         },
       });
     }

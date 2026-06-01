@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   getEmployerActivity,
   getEmployerDashboardSummary,
@@ -83,9 +83,22 @@ export default function EmployerFeed() {
         {error && <p style={{ padding: 16, color: 'var(--color-error)' }}>{error}</p>}
         {!loading && !error && matches.map((c) => (
           <div key={c.candidateId} className="empr-cand-card">
-            <div className="empr-cand-avatar">{c.name.split(' ').map((x) => x[0]).join('').slice(0, 2).toUpperCase()}</div>
+            <div className={`empr-cand-avatar ${c.isPremium ? 'premium-pulsing-avatar' : ''}`} style={{
+              position: 'relative',
+              border: c.isPremium ? '2px solid #d4af37' : undefined,
+              boxShadow: c.isPremium ? '0 0 8px rgba(212, 175, 85, 0.5)' : undefined
+            }}>{c.name.split(' ').map((x) => x[0]).join('').slice(0, 2).toUpperCase()}</div>
             <div className="empr-cand-info">
-              <p className="empr-cand-name">{c.name}</p>
+              <p className="empr-cand-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Link to={c.employeeUid ? `/employee/view/${c.employeeUid}` : '/employer/candidates'} style={{ color: 'inherit', textDecoration: 'none' }} className="cand-hover-link">
+                  {c.name}
+                </Link>
+                {c.isPremium && (
+                  <span className="material-symbols-outlined" style={{ fontSize: 16, color: '#d4af37', verticalAlign: 'middle' }} title="Premium Candidate">
+                    workspace_premium
+                  </span>
+                )}
+              </p>
               <p className="empr-cand-headline">{c.title}</p>
               <div className="empr-cand-skills">
                 {c.skills.map(s => <span key={s} className="emp-match-tag">{s}</span>)}
@@ -95,7 +108,7 @@ export default function EmployerFeed() {
                 <span>For: {c.roleTarget}</span>
               </div>
               <div className="empr-cand-actions">
-                <a href="/employer/candidates" className="btn btn-gold" style={{ fontSize: 12, padding: '5px 14px' }}>Review Profile</a>
+                <Link to={c.employeeUid ? `/employee/view/${c.employeeUid}` : '/employer/candidates'} className="btn btn-gold" style={{ fontSize: 12, padding: '5px 14px' }}>Review Profile</Link>
                 <a href="/employer/candidates" className="btn btn-ghost" style={{ fontSize: 12, padding: '5px 14px' }}>Schedule Interview</a>
               </div>
             </div>

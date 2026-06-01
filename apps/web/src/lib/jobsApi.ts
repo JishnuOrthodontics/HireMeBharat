@@ -30,6 +30,7 @@ export interface JobListingApi {
   viewCount?: number;
   createdAt?: string | null;
   updatedAt?: string | null;
+  companyIsPro?: boolean;
 }
 
 export interface JobApplicationApi {

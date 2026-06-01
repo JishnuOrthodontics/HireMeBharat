@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getEmployerJobListings, createJobListing, patchJobListing, deleteJobListing, type JobListingApi } from '../../lib/jobsApi';
+import { getBillingStatus } from '../../lib/billingApi';
 import '../jobs/Jobs.css';
 
 const TABS = ['ALL', 'ACTIVE', 'DRAFT', 'PAUSED', 'FILLED', 'CLOSED'] as const;
@@ -11,6 +13,9 @@ export default function EmployerJobListings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
+  
+  // Billing status
+  const [billingStatus, setBillingStatus] = useState<any>(null);
   
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
@@ -37,8 +42,12 @@ export default function EmployerJobListings() {
     setLoading(true);
     setError('');
     try {
-      const listingsRes = await getEmployerJobListings();
+      const [listingsRes, statusRes] = await Promise.all([
+        getEmployerJobListings(),
+        getBillingStatus().catch(() => null),
+      ]);
       setListings(listingsRes.listings || []);
+      if (statusRes) setBillingStatus(statusRes);
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
     } finally {
@@ -49,6 +58,9 @@ export default function EmployerJobListings() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const activeListingsCount = listings.filter(l => l.status === 'ACTIVE').length;
+  const isCapped = activeListingsCount >= 3 && billingStatus?.plan !== 'PRO';
 
   const handleOpenCreateModal = () => {
     setEditingListing(null);
@@ -91,6 +103,10 @@ export default function EmployerJobListings() {
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
+    if (newStatus === 'ACTIVE' && isCapped) {
+      alert("You have reached the free tier limit of 3 active job listings. Please pause an existing job or upgrade to Pro to publish more active listings!");
+      return;
+    }
     setBusyId(id);
     try {
       await patchJobListing(id, { status: newStatus as any });
@@ -121,6 +137,14 @@ export default function EmployerJobListings() {
     if (!formDept.trim()) return alert('Department is required');
     if (!formLoc.trim()) return alert('Location is required');
     if (!formDesc.trim()) return alert('Description is required');
+
+    if (formStatus === 'ACTIVE' && isCapped) {
+      const becomesActive = !editingListing || editingListing.status !== 'ACTIVE';
+      if (becomesActive) {
+        alert("You have reached the free tier limit of 3 active job listings. Please save as a Draft or upgrade to Pro to post active jobs!");
+        return;
+      }
+    }
 
     const requirements = formReqsText.split('\n').map(r => r.trim()).filter(Boolean);
     const benefits = formBenefitsText.split('\n').map(b => b.trim()).filter(Boolean);
@@ -179,6 +203,34 @@ export default function EmployerJobListings() {
           New Job Listing
         </button>
       </div>
+
+      {billingStatus && billingStatus.plan !== 'PRO' && (
+        <div className="billing-limit-banner" style={{
+          background: 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(26,26,46,0.3))',
+          border: '1px solid rgba(212,175,55,0.25)',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
+          <div>
+            <p style={{ fontWeight: 600, fontSize: 14, color: '#d4af37', margin: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>info</span>
+              Free Job Postings Capped
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)', margin: '4px 0 0 0' }}>
+              You are currently using <strong>{activeListingsCount} of 3</strong> active job listings. Upgrade to Employer Pro for unlimited listings and direct candidate unlocks!
+            </p>
+          </div>
+          <Link to="/employer/pricing" className="btn btn-gold" style={{ fontSize: 12, padding: '8px 16px' }}>
+            Upgrade to Pro
+          </Link>
+        </div>
+      )}
 
       <div className="empr-filter-tabs" style={{ marginBottom: 20 }}>
         {TABS.map(tab => (

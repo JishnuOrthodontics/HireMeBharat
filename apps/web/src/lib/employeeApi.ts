@@ -78,6 +78,7 @@ export interface EmployeePublicProfileApi {
   publicProfileUrl: string;
   /** Present when the candidate allows resume download for recruiters. */
   resume: { url: string; fileName: string } | null;
+  isPremium?: boolean;
   updatedAt?: string | null;
 }
 

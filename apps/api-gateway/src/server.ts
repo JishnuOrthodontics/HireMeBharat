@@ -23,6 +23,7 @@ const UPSTREAM_EMPLOYEE = process.env.UPSTREAM_EMPLOYEE ?? 'http://127.0.0.1:300
 const UPSTREAM_EMPLOYER = process.env.UPSTREAM_EMPLOYER ?? 'http://127.0.0.1:3004';
 const UPSTREAM_ADMIN = process.env.UPSTREAM_ADMIN ?? 'http://127.0.0.1:3005';
 const UPSTREAM_JOBS = process.env.UPSTREAM_JOBS ?? 'http://127.0.0.1:3006';
+const UPSTREAM_BILLING = process.env.UPSTREAM_BILLING ?? 'http://127.0.0.1:3007';
 
 /** @fastify/reply-from may drop `authorization` while handling Connection hop-by-hop headers — restore from inbound bearer (incl. X-Firebase-Authorization fallback). */
 function preserveInboundAuth(originalReq: FastifyRequest, headers: Record<string, unknown>) {
@@ -368,6 +369,13 @@ async function buildApp() {
       await app.authenticate(request, reply);
       await app.requireRole('ADMIN')(request, reply);
     }
+  });
+
+  await app.register(httpProxy as any, {
+    upstream: UPSTREAM_BILLING,
+    prefix: '/api/billing',
+    rewritePrefix: '/api/billing',
+    replyOptions: forwardAuthReplyOptions,
   });
 
   // ──────────────────────────────────────────────────────────────

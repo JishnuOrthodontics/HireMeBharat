@@ -185,6 +185,15 @@ export async function employerRoutes(app: FastifyInstance) {
 
     const docs = await db.collection('employer_candidates').find(filter).sort({ score: -1, updatedAt: -1 }).skip(offset).limit(limit).toArray();
     const total = await db.collection('employer_candidates').countDocuments(filter);
+
+    const employeeUids = docs.map(d => d.employeeUid).filter(Boolean);
+    const premiumSubs = await db.collection('billing_subscriptions').find({
+      userUid: { $in: employeeUids },
+      plan: 'PREMIUM',
+      expiresAt: { $gt: new Date() }
+    }).toArray();
+    const premiumUids = new Set(premiumSubs.map((s: any) => s.userUid));
+
     return reply.send({
       candidates: docs.map((doc) => ({
         id: String(doc._id),
@@ -201,6 +210,7 @@ export async function employerRoutes(app: FastifyInstance) {
         stageLabel: stageLabel(String(doc.stage || 'SOURCED')),
         createdAt: toIso(doc.createdAt),
         updatedAt: toIso(doc.updatedAt),
+        isPremium: premiumUids.has(doc.employeeUid),
       })),
       total,
       limit,
@@ -250,9 +260,19 @@ export async function employerRoutes(app: FastifyInstance) {
       .sort({ score: -1, updatedAt: -1 })
       .limit(10)
       .toArray();
+
+    const employeeUids = docs.map(d => d.employeeUid).filter(Boolean);
+    const premiumSubs = await db.collection('billing_subscriptions').find({
+      userUid: { $in: employeeUids },
+      plan: 'PREMIUM',
+      expiresAt: { $gt: new Date() }
+    }).toArray();
+    const premiumUids = new Set(premiumSubs.map((s: any) => s.userUid));
+
     return reply.send({
       matches: docs.map((doc) => ({
         candidateId: String(doc._id),
+        employeeUid: doc.employeeUid,
         requisitionId: doc.requisitionId,
         score: Number(doc.score || 0),
         status: doc.stage,
@@ -262,6 +282,7 @@ export async function employerRoutes(app: FastifyInstance) {
         compensation: doc.compensation || '',
         roleTarget: doc.roleTarget || '',
         updatedAt: toIso(doc.updatedAt),
+        isPremium: premiumUids.has(doc.employeeUid),
       })),
     });
   });

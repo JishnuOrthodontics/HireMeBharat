@@ -1,0 +1,67 @@
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import { config } from 'dotenv';
+import { registerMongoPlugin, registerAuthPlugin, registerRbacPlugin } from '@hiremebharat/backend-core';
+import { billingRoutes } from './routes/billing/index.js';
+
+config();
+
+const PORT = parseInt(process.env.PORT || '3007', 10);
+const HOST = process.env.HOST || '0.0.0.0';
+
+async function buildApp() {
+  const app = Fastify({
+    logger: {
+      level: 'info',
+      transport: {
+        target: 'pino-pretty',
+      },
+    },
+  });
+
+  // --- Plugins ---
+  await app.register(cors, {
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true,
+  });
+
+  await registerMongoPlugin(app);
+  await registerAuthPlugin(app);
+  await registerRbacPlugin(app);
+
+  // --- Routes ---
+  await app.register(billingRoutes, { prefix: '/api/billing' });
+
+  // --- Health Check ---
+  app.get('/api/health', async () => ({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'hiremebharat-api-billing',
+  }));
+
+  return app;
+}
+
+async function start() {
+  try {
+    const app = await buildApp();
+
+    await app.listen({ port: PORT, host: HOST });
+    console.log(`🚀 HireMeBharat API Billing running at http://${HOST}:${PORT}`);
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      console.log('Shutting down gracefully...');
+      await app.close();
+      process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+}
+
+start();
