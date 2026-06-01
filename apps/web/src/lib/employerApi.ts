@@ -1,4 +1,5 @@
 import { authRequest } from './apiClient';
+import type { NotificationApi } from './employeeApi';
 
 const request = authRequest;
 
@@ -122,5 +123,21 @@ export async function patchEmployerProfile(payload: Partial<EmployerProfileApi>)
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function getEmployerNotifications() {
+  return request<{ notifications: NotificationApi[]; total: number }>('/api/employer/notifications');
+}
+
+export async function markEmployerNotificationRead(notificationId: string) {
+  return request<{ ok: boolean }>(`/api/employer/notifications/${notificationId}/read`, {
+    method: 'POST',
+  });
+}
+
+export async function markAllEmployerNotificationsRead() {
+  return request<{ ok: boolean }>('/api/employer/notifications/read-all', {
+    method: 'POST',
   });
 }

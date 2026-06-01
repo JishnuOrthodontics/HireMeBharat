@@ -154,6 +154,12 @@ export async function markNotificationRead(notificationId: string) {
   });
 }
 
+export async function markAllNotificationsRead() {
+  return request<{ ok: boolean }>('/api/employee/notifications/read-all', {
+    method: 'POST',
+  });
+}
+
 export async function getDashboardSummary() {
   return request<{ summary: { activeMatches: number; interviews: number; unreadNotifications: number } }>(
     '/api/employee/dashboard-summary'

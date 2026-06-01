@@ -22,6 +22,12 @@ const activityQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+const notificationsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+
 
 const profilePatchSchema = z.object({
   companyName: z.string().min(2).max(200).optional(),
@@ -67,6 +73,7 @@ export async function employerRoutes(app: FastifyInstance) {
       db.collection('employer_matches').createIndex({ employerUid: 1, score: -1 }),
       db.collection('employer_interviews').createIndex({ employerUid: 1, scheduledAt: 1 }),
       db.collection('employer_activity').createIndex({ employerUid: 1, createdAt: -1 }),
+      db.collection('notifications').createIndex({ userUid: 1, read: 1, createdAt: -1 }),
     ]);
   });
 
@@ -415,6 +422,69 @@ export async function employerRoutes(app: FastifyInstance) {
         $setOnInsert: { employerUid: uid, createdAt: now },
       },
       { upsert: true }
+    );
+    return reply.send({ ok: true });
+  });
+
+  // GET /api/employer/notifications
+  app.get('/notifications', async (request, reply) => {
+    const parsed = notificationsQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    const filter = { userUid: uid };
+    const docs = await db.collection('notifications')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray();
+    const total = await db.collection('notifications').countDocuments(filter);
+
+    return reply.send({
+      notifications: docs.map((n) => ({
+        id: String(n._id),
+        type: n.type,
+        title: n.title,
+        content: n.content,
+        read: Boolean(n.read),
+        createdAt: toIso(n.createdAt),
+      })),
+      total,
+      limit,
+      offset,
+    });
+  });
+
+  // POST /api/employer/notifications/:id/read
+  app.post('/notifications/:id/read', async (request, reply) => {
+    const uid = request.user!.uid;
+    const id = (request.params as any)?.id;
+    if (!ObjectId.isValid(id)) {
+      return reply.code(400).send({ error: 'Bad Request', message: 'Invalid notification id' });
+    }
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+    const result = await db.collection('notifications').updateOne(
+      { _id: new ObjectId(id), userUid: uid },
+      { $set: { read: true } }
+    );
+    if (!result.matchedCount) return reply.code(404).send({ error: 'Not Found', message: 'Notification not found' });
+    return reply.send({ ok: true });
+  });
+
+  // POST /api/employer/notifications/read-all
+  app.post('/notifications/read-all', async (request, reply) => {
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+    await db.collection('notifications').updateMany(
+      { userUid: uid, read: false },
+      { $set: { read: true } }
     );
     return reply.send({ ok: true });
   });

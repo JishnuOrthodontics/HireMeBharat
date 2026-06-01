@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useRoleNotifications } from '../hooks/useRoleNotifications';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { useQueryClient } from '@tanstack/react-query';
 import './DashboardLayout.css';
 
 interface NavItem {
@@ -37,6 +40,37 @@ export default function DashboardLayout({
   const [searchQuery, setSearchQuery] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const { notifications, unreadCount, markRead, markAllRead } = useRoleNotifications();
+  const { subscribe } = useWebSocket();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const unsubscribe = subscribe('notification', () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications', role] });
+      if (role === 'employee') {
+        queryClient.invalidateQueries({ queryKey: ['employee', 'dashboardSummary'] });
+      }
+    });
+    return () => unsubscribe();
+  }, [subscribe, queryClient, role]);
+
+  const formatTime = (createdAt?: string | null): string => {
+    if (!createdAt) return '';
+    const now = new Date();
+    const date = new Date(createdAt);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  };
 
   const displayUsername = userProfile?.displayName || userName;
   const initials = displayUsername
@@ -95,15 +129,86 @@ export default function DashboardLayout({
 
           {/* Right: Profile */}
           <div className="dash-topnav-right">
-            <button className="dash-notification-btn desktop-nav">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="dash-nav-badge">3</span>
-            </button>
+            <div className="dash-notification-menu-wrap">
+              <button
+                className={`dash-notification-btn desktop-nav ${notificationsOpen ? 'active' : ''}`}
+                onClick={() => {
+                  setNotificationsOpen(!notificationsOpen);
+                  setProfileMenuOpen(false);
+                }}
+              >
+                <span className="material-symbols-outlined">notifications</span>
+                {unreadCount > 0 && (
+                  <span className="dash-nav-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <>
+                  <div className="dash-profile-backdrop" onClick={() => setNotificationsOpen(false)} />
+                  <div className="dash-notifications-dropdown glass-card animate-fade-in">
+                    <div className="dash-notifications-header">
+                      <h3 className="dash-notifications-title">Notifications</h3>
+                      {unreadCount > 0 && (
+                        <button className="dash-notifications-clear-btn" onClick={() => markAllRead()}>
+                          Mark all as read
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="dash-notifications-list">
+                      {notifications.length === 0 ? (
+                        <div className="dash-notifications-empty">
+                          <span className="material-symbols-outlined empty-icon">notifications_off</span>
+                          <p className="empty-text">No notifications yet</p>
+                        </div>
+                      ) : (
+                        notifications.map((n) => {
+                          let iconName = 'info';
+                          if (n.type === 'JOB_APPLICATION') iconName = 'work';
+                          if (n.type === 'MESSAGE' || n.type === 'CONCIERGE') iconName = 'chat';
+                          if (n.type === 'MATCH') iconName = 'handshake';
+                          if (n.type === 'OFFER') iconName = 'assignment_turned_in';
+                          if (n.type === 'INTERVIEW') iconName = 'calendar_month';
+
+                          return (
+                            <div
+                              key={n.id}
+                              className={`dash-notification-item ${!n.read ? 'unread' : ''}`}
+                              onClick={() => {
+                                if (!n.read) markRead(n.id);
+                              }}
+                            >
+                              <div className="notification-icon-wrap">
+                                <span className="material-symbols-outlined">{iconName}</span>
+                              </div>
+                              <div className="notification-content-wrap">
+                                <p className="notification-title">{n.title}</p>
+                                <p className="notification-desc">{n.content}</p>
+                                {n.createdAt && (
+                                  <span className="notification-time">
+                                    {formatTime(n.createdAt)}
+                                  </span>
+                                )}
+                              </div>
+                              {!n.read && <span className="notification-unread-dot" />}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
             <div className="dash-profile-menu-wrap">
               <button
                 className="dash-profile-btn"
-                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                onClick={() => {
+                  setProfileMenuOpen(!profileMenuOpen);
+                  setNotificationsOpen(false);
+                }}
               >
                 {(userProfile?.photoURL || userAvatar) ? (
                   <img src={userProfile?.photoURL || userAvatar} alt={displayUsername} className="dash-profile-avatar" />

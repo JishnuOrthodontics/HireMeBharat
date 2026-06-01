@@ -1,4 +1,5 @@
 import { auth } from './firebase';
+import type { NotificationApi } from './employeeApi';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -151,4 +152,20 @@ export async function getAdminSystemHealth() {
 
 export async function getAdminAnalytics() {
   return request<AdminAnalyticsApi>('/api/admin/analytics');
+}
+
+export async function getAdminNotifications() {
+  return request<{ notifications: NotificationApi[]; total: number }>('/api/admin/notifications');
+}
+
+export async function markAdminNotificationRead(notificationId: string) {
+  return request<{ ok: boolean }>(`/api/admin/notifications/${notificationId}/read`, {
+    method: 'POST',
+  });
+}
+
+export async function markAllAdminNotificationsRead() {
+  return request<{ ok: boolean }>('/api/admin/notifications/read-all', {
+    method: 'POST',
+  });
 }

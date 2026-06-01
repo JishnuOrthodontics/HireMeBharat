@@ -661,6 +661,18 @@ export async function employeeRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 
+  // POST /api/employee/notifications/read-all
+  app.post('/notifications/read-all', async (request, reply) => {
+    const uid = request.user!.uid;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+    await db.collection('notifications').updateMany(
+      { userUid: uid, read: false },
+      { $set: { read: true } }
+    );
+    return reply.send({ ok: true });
+  });
+
   // GET /api/employee/dashboard-summary
   app.get('/dashboard-summary', async (request, reply) => {
     const uid = request.user!.uid;
