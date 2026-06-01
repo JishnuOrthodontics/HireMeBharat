@@ -1,5 +1,4 @@
 import { Routes, Route, Link } from 'react-router-dom';
-import { useEffect, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import EmployeeFeed from './EmployeeFeed';
 import EmployeeMatches from './EmployeeMatches';
@@ -11,7 +10,7 @@ import EmployeeApplications from './EmployeeApplications';
 import EmployeeOffers from './EmployeeOffers';
 import EmployeeInterviews from './EmployeeInterviews';
 import EmployeeFeedback from './EmployeeFeedback';
-import { getDashboardSummary, getEmployeeMatches, getEmployeeProfile, getNotifications } from '../../lib/employeeApi';
+import { useEmployeeProfile, useEmployeeDashboardSummary, useNotifications, useEmployeeMatches } from '../../hooks/useEmployeeQueries';
 import './Employee.css';
 
 const navItems = [
@@ -254,34 +253,22 @@ function RightSidebar({
 
 /* ===== Main Dashboard ===== */
 export default function Dashboard() {
-  const [profile, setProfile] = useState<any>(null);
-  const [summary, setSummary] = useState({ activeMatches: 0, interviews: 0, unreadNotifications: 0 });
-  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; createdAt?: string | null }>>([]);
+  const { data: profile } = useEmployeeProfile();
+  const { data: summaryData } = useEmployeeDashboardSummary();
+  const { data: notificationsData } = useNotifications();
+  const { data: matchesRes } = useEmployeeMatches({ status: 'ALL', limit: 1 });
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const [profileRes, summaryRes, notificationRes, matchRes] = await Promise.all([
-          getEmployeeProfile(),
-          getDashboardSummary(),
-          getNotifications(),
-          getEmployeeMatches({ status: 'ALL', limit: 1 }),
-        ]);
-        if (cancelled) return;
-        setProfile(profileRes.profile);
-        setSummary(summaryRes.summary);
-        setNotifications(notificationRes.notifications.map((n) => ({ id: n.id, title: n.title, createdAt: n.createdAt })));
-        if (summaryRes.summary.activeMatches === 0 && matchRes.total > 0) {
-          setSummary((s) => ({ ...s, activeMatches: matchRes.total }));
-        }
-      } catch {
-        // Keep dashboard usable even if side widgets fail.
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  const summary = {
+    activeMatches: summaryData?.activeMatches ?? matchesRes?.total ?? 0,
+    interviews: summaryData?.interviews ?? 0,
+    unreadNotifications: summaryData?.unreadNotifications ?? 0,
+  };
+
+  const notifications = (notificationsData ?? []).map((n) => ({
+    id: n.id,
+    title: n.title,
+    createdAt: n.createdAt,
+  }));
 
   return (
     <DashboardLayout
