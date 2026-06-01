@@ -125,17 +125,6 @@ async function buildApp() {
     }
   });
 
-  // Shared routes (require auth but no specific role) -> can go to any, let's use api-auth
-  await app.register(httpProxy as any, {
-    upstream: UPSTREAM_AUTH,
-    prefix: '/api',
-    rewritePrefix: '/api',
-    replyOptions: forwardAuthReplyOptions,
-    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
-      await app.authenticate(request, reply);
-    }
-  });
-
   // --- Health Check ---
   app.get('/api/health', async () => ({
     status: 'ok',

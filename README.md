@@ -77,11 +77,12 @@ VITE_FIREBASE_API_KEY=AIzaSyBy...
 
 Authentication is handled on the client via `AuthContext` utilizing the Firebase SDK. The **API Gateway** acts as the security shield, validating Firebase JWTs before proxying requests to any internal microservice.
 
-- **Gateway (Port 3001):** Validates tokens and routes to sub-services. Proxies use **`rewritePrefix`** so upstream services still receive full paths such as **`/api/public/register`** (`@fastify/http-proxy` otherwise strips the route prefix). In Docker Compose, upstream URLs are set via **`UPSTREAM_AUTH`**, **`UPSTREAM_EMPLOYEE`**, **`UPSTREAM_EMPLOYER`**, **`UPSTREAM_ADMIN`** (defaults: `127.0.0.1` ports 3002–3005 for local processes; prod compose uses **`http://api-auth:3002`** and sibling DNS names).
+- **Gateway (Port 3001):** Validates tokens and routes to sub-services. Proxies use `rewritePrefix` so upstream services still receive full paths such as `/api/public/register` (`@fastify/http-proxy` otherwise strips the route prefix). In Docker Compose, upstream URLs are set via **`UPSTREAM_AUTH`**, **`UPSTREAM_EMPLOYEE`**, **`UPSTREAM_EMPLOYER`**, **`UPSTREAM_ADMIN`** (defaults: `127.0.0.1` ports 3002–3005 for local processes; prod compose uses `http://api-auth:3002` and sibling DNS names).
 - **Auth Service (Port 3002):** Handles `/public` endpoints.
 - **Employee Service (Port 3003):** Handles `/employee` endpoints.
 - **Employer Service (Port 3004):** Handles `/employer` endpoints.
 - **Admin Service (Port 3005):** Handles `/admin` endpoints.
+- **Jobs Service (Port 3006):** Authenticated routes under `/api/jobs` now require token validation; public listings remain under `/api/jobs/listings`.
 
 ## 🔄 Fresh GCP VM / secrets reset
 

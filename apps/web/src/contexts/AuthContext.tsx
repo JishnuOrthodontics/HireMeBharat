@@ -28,6 +28,8 @@ interface AuthState {
   firebaseUser: User | null;
   /** Backend user profile (null if not yet registered) */
   userProfile: UserProfile | null;
+  /** Current ID token (null if not available) */
+  idToken: string | null;
   /** True while Firebase auth state is resolving */
   loading: boolean;
   /** True when a Google user needs to pick a role before first use */
@@ -91,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     firebaseUser: null,
     userProfile: null,
+    idToken: null,
     loading: true,
     needsRoleSelection: false,
     error: null,
@@ -119,10 +122,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        const token = await user.getIdToken();
         const profile = await fetchProfile(user);
         patch({
           firebaseUser: user,
           userProfile: profile,
+          idToken: token,
           needsRoleSelection: !profile,
           loading: false,
         });
@@ -130,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         patch({
           firebaseUser: null,
           userProfile: null,
+          idToken: null,
           needsRoleSelection: false,
           loading: false,
         });
@@ -137,6 +143,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     return unsubscribe;
   }, [fetchProfile]);
+
+  // Listen for token refresh events
+  useEffect(() => {
+    const unsub = onIdTokenChanged(auth, async (user) => {
+      if (user) {
+        const token = await user.getIdToken();
+        patch({ idToken: token });
+      } else {
+        patch({ idToken: null });
+      }
+    });
+    return unsub;
+  }, []);
 
   // ---- Auth methods ----
 
@@ -253,8 +272,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const getIdToken = async () => {
+    // Return the latest token from state if available, otherwise fetch a fresh one
+    if (state.idToken) return state.idToken;
     if (!state.firebaseUser) return null;
-    return state.firebaseUser.getIdToken();
+    const token = await state.firebaseUser.getIdToken();
+    patch({ idToken: token });
+    return token;
   };
 
   const clearError = () => patch({ error: null });
