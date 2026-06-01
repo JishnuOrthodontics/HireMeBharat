@@ -881,3 +881,185 @@
     align-items: center;
   }
 }
+
+/* ===== Advanced Atlas Search Layout & Autocomplete Dropdown ===== */
+
+.jobs-search-bar-container {
+  position: relative;
+  flex: 1;
+}
+
+.jobs-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--color-surface-card);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius-default);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  max-height: 280px;
+  overflow-y: auto;
+  backdrop-filter: blur(12px);
+}
+
+.jobs-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: var(--color-on-surface);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.jobs-autocomplete-item:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+.jobs-autocomplete-item span.icon {
+  color: var(--color-primary-container);
+  font-size: 16px;
+}
+
+/* 2-Column Search Layout */
+.jobs-main-content {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 64px;
+}
+
+/* Sidebar Facets */
+.jobs-sidebar-facets {
+  background: var(--color-surface-card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.facet-group {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding-bottom: 16px;
+}
+
+.facet-group:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.facet-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-on-surface);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.facet-title span {
+  font-size: 18px;
+  color: var(--color-secondary);
+}
+
+.facet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.facet-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: var(--radius-default);
+  transition: all var(--transition-fast);
+}
+
+.facet-item:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--color-on-surface);
+}
+
+.facet-item.active {
+  background: rgba(80,250,123,0.06);
+  color: var(--color-primary-container);
+  font-weight: 600;
+}
+
+.facet-count {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.05);
+  color: var(--color-on-surface-variant);
+}
+
+.facet-item.active .facet-count {
+  background: rgba(80,250,123,0.15);
+  color: var(--color-primary-container);
+}
+
+/* Sidebar Reset */
+.btn-facet-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  font-size: 12px;
+  border: 1px dashed rgba(255,255,255,0.15);
+  border-radius: var(--radius-default);
+  color: var(--color-on-surface-variant);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-facet-reset:hover {
+  border-color: var(--color-primary-container);
+  color: var(--color-primary-container);
+  background: rgba(80,250,123,0.03);
+}
+
+/* Range Filter styling */
+.facet-range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.facet-range-inputs input {
+  width: 100%;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-default);
+  color: var(--color-on-surface);
+  font-size: 12px;
+}
+
+/* Responsive grid overrides */
+@media (max-width: 900px) {
+  .jobs-main-content {
+    grid-template-columns: 1fr;
+  }
+}
+

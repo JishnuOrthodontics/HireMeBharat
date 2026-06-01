@@ -128,9 +128,14 @@ export async function searchJobListings(params: {
     if (val !== undefined && val !== '') query.set(key, String(val));
   });
   const suffix = query.toString() ? `?${query.toString()}` : '';
-  return publicRequest<{ listings: JobListingApi[]; total: number; limit: number; offset: number }>(
+  return publicRequest<{ listings: JobListingApi[]; facets: any; total: number; limit: number; offset: number }>(
     `/api/jobs/listings${suffix}`
   );
+}
+
+export async function getJobAutocompleteSuggestions(q: string) {
+  if (!q.trim()) return { suggestions: [] };
+  return publicRequest<{ suggestions: string[] }>(`/api/jobs/autocomplete?q=${encodeURIComponent(q)}`);
 }
 
 export async function getJobListingById(id: string) {

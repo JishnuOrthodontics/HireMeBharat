@@ -143,7 +143,72 @@ export async function jobsRoutes(app: FastifyInstance) {
   //  PUBLIC ROUTES (no authentication required)
   // ════════════════════════════════════════════════════════════════════
 
-  // GET /api/jobs/listings — Browse / search public job listings
+  // GET /api/jobs/autocomplete — Suggestions for search box
+  app.get('/autocomplete', async (request, reply) => {
+    const q = (request.query as any)?.q;
+    if (!q || typeof q !== 'string' || !q.trim()) {
+      return reply.send({ suggestions: [] });
+    }
+
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    // Atlas Search Autocomplete
+    const pipeline = [
+      {
+        $search: {
+          index: 'default',
+          autocomplete: {
+            query: q.trim(),
+            path: 'title',
+            fuzzy: { maxEdits: 1 }
+          }
+        }
+      },
+      {
+        $limit: 15
+      },
+      {
+        $project: {
+          title: 1,
+          company: 1,
+          _id: 0
+        }
+      }
+    ];
+
+    try {
+      const listings = db.collection('job_listings');
+      const docs = await listings.aggregate(pipeline).toArray();
+      
+      const suggestionsSet = new Set<string>();
+      docs.forEach(doc => {
+        if (doc.title) suggestionsSet.add(doc.title);
+        if (doc.company) suggestionsSet.add(doc.company);
+      });
+
+      return reply.send({
+        suggestions: Array.from(suggestionsSet).slice(0, 10)
+      });
+    } catch (err: any) {
+      // Fallback in case Atlas Search is not indexed on current collection (e.g. initial setup)
+      const suggestionsSet = new Set<string>();
+      try {
+        const regex = new RegExp('^' + q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+        const docs = await db.collection('job_listings')
+          .find({ status: 'ACTIVE', $or: [{ title: regex }, { company: regex }] })
+          .limit(20)
+          .toArray();
+        docs.forEach(doc => {
+          if (doc.title) suggestionsSet.add(doc.title);
+          if (doc.company) suggestionsSet.add(doc.company);
+        });
+      } catch {}
+      return reply.send({ suggestions: Array.from(suggestionsSet).slice(0, 10) });
+    }
+  });
+
+  // GET /api/jobs/listings — Browse / search public job listings with Atlas Search & Facets
   app.get('/listings', async (request, reply) => {
     const parsed = searchQuerySchema.safeParse(request.query ?? {});
     if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
@@ -151,63 +216,301 @@ export async function jobsRoutes(app: FastifyInstance) {
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
     const { q, location, type, salaryMin, salaryMax, skills, sort, limit, offset } = parsed.data;
-    const filter: Record<string, unknown> = { status: 'ACTIVE' };
 
+    let pipeline: any[] = [];
+
+    // Stage 1: Native MongoDB Atlas Search Compound Operator
     if (q) {
-      filter.$text = { $search: q };
+      const searchStage: any = {
+        $search: {
+          index: 'default',
+          compound: {
+            must: [
+              {
+                text: {
+                  query: 'ACTIVE',
+                  path: 'status'
+                }
+              }
+            ],
+            should: [
+              {
+                text: {
+                  query: q,
+                  path: ['title', 'company', 'description', 'skills'],
+                  fuzzy: {
+                    maxEdits: 1,
+                    prefixLength: 1
+                  }
+                }
+              }
+            ],
+            minimumShouldMatch: 1
+          }
+        }
+      };
+
+      if (location) {
+        searchStage.$search.compound.must.push({
+          text: {
+            query: location,
+            path: 'location'
+          }
+        });
+      }
+      if (type && type !== 'ALL') {
+        searchStage.$search.compound.must.push({
+          text: {
+            query: type,
+            path: 'employmentType'
+          }
+        });
+      }
+      if (skills) {
+        const skillList = skills.split(',').map(s => s.trim()).filter(Boolean);
+        skillList.forEach(s => {
+          searchStage.$search.compound.must.push({
+            text: {
+              query: s,
+              path: 'skills'
+            }
+          });
+        });
+      }
+
+      pipeline.push(searchStage);
+      
+      // Project native Lucene searchScore
+      pipeline.push({
+        $addFields: {
+          score: { $meta: 'searchScore' }
+        }
+      });
+    } else {
+      // Standard $match when no text keywords 'q' are entered
+      const matchStage: any = { status: 'ACTIVE' };
+      if (location) {
+        matchStage.location = { $regex: location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
+      }
+      if (type && type !== 'ALL') {
+        matchStage.employmentType = type;
+      }
+      if (skills) {
+        const skillList = skills.split(',').map(s => s.trim()).filter(Boolean);
+        if (skillList.length) {
+          matchStage.skills = { $in: skillList };
+        }
+      }
+      pipeline.push({ $match: matchStage });
     }
-    if (location) {
-      filter.location = { $regex: location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
-    }
-    if (type && type !== 'ALL') {
-      filter.employmentType = type;
-    }
+
+    // Stage 2: Post-Search / Post-Match filters (Experience levels & Salary Range bounds)
+    const rangeMatch: any = {};
     if (salaryMin) {
-      filter.salaryMax = { $gte: salaryMin };
+      rangeMatch.salaryMax = { $gte: salaryMin };
     }
     if (salaryMax) {
-      filter.salaryMin = { ...(filter.salaryMin as object || {}), $lte: salaryMax };
+      rangeMatch.salaryMin = { ...(rangeMatch.salaryMin || {}), $lte: salaryMax };
     }
-    if (skills) {
-      const skillList = skills.split(',').map(s => s.trim()).filter(Boolean);
-      if (skillList.length) filter.skills = { $in: skillList };
+    if (Object.keys(rangeMatch).length > 0) {
+      pipeline.push({ $match: rangeMatch });
     }
 
-    const sortOption: Record<string, 1 | -1> = sort === 'salary_high'
-      ? { salaryMax: -1 }
-      : sort === 'salary_low'
-        ? { salaryMin: 1 }
-        : { createdAt: -1 };
+    // Determine Sort Options
+    const sortStage: any = {};
+    if (q && sort === 'newest') {
+      sortStage.score = -1;
+    } else if (sort === 'salary_high') {
+      sortStage.salaryMax = -1;
+    } else if (sort === 'salary_low') {
+      sortStage.salaryMin = 1;
+    } else {
+      sortStage.createdAt = -1;
+    }
 
-    const listings = db.collection('job_listings');
-    const docs = await listings.find(filter).sort(sortOption).skip(offset).limit(limit).toArray();
-    const total = await listings.countDocuments(filter);
-
-    return reply.send({
-      listings: docs.map(doc => ({
-        id: String(doc._id),
-        title: doc.title,
-        company: doc.company || '',
-        companyLogoUrl: doc.companyLogoUrl || '',
-        department: doc.department || '',
-        location: doc.location || '',
-        employmentType: doc.employmentType || 'FULL_TIME',
-        description: (doc.description || '').slice(0, 300),
-        salaryMin: Number(doc.salaryMin || 0),
-        salaryMax: Number(doc.salaryMax || 0),
-        salaryCurrency: doc.salaryCurrency || 'INR',
-        salaryLabel: salaryLabel(Number(doc.salaryMin || 0), Number(doc.salaryMax || 0), doc.salaryCurrency || 'INR'),
-        experienceMin: Number(doc.experienceMin || 0),
-        experienceMax: Number(doc.experienceMax || 0),
-        skills: Array.isArray(doc.skills) ? doc.skills : [],
-        featured: Boolean(doc.featured),
-        applicationCount: Number(doc.applicationCount || 0),
-        createdAt: toIso(doc.createdAt),
-      })),
-      total,
-      limit,
-      offset,
+    // Stage 3: Multi-Faceted Aggregation
+    pipeline.push({
+      $facet: {
+        listings: [
+          { $sort: sortStage },
+          { $skip: offset },
+          { $limit: limit }
+        ],
+        totalCount: [
+          { $count: 'count' }
+        ],
+        locations: [
+          { $group: { _id: '$location', count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 }
+        ],
+        skills: [
+          { $unwind: '$skills' },
+          { $group: { _id: '$skills', count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 15 }
+        ],
+        employmentTypes: [
+          { $group: { _id: '$employmentType', count: { $sum: 1 } } },
+          { $sort: { count: -1 } }
+        ],
+        salaryRanges: [
+          {
+            $bucket: {
+              groupBy: '$salaryMax',
+              boundaries: [0, 500000, 1000000, 2000000, 3000000, Infinity],
+              default: 'Other',
+              output: {
+                count: { $sum: 1 }
+              }
+            }
+          }
+        ],
+        experienceLevels: [
+          {
+            $bucket: {
+              groupBy: '$experienceMin',
+              boundaries: [0, 3, 6, Infinity],
+              default: 'Other',
+              output: {
+                count: { $sum: 1 }
+              }
+            }
+          }
+        ]
+      }
     });
+
+    try {
+      const listings = db.collection('job_listings');
+      const result = await listings.aggregate(pipeline).toArray();
+      const facetData = result[0] || {};
+
+      const docs = facetData.listings || [];
+      const total = facetData.totalCount?.[0]?.count || 0;
+
+      const salaryRanges = (facetData.salaryRanges || []).map((b: any) => {
+        let label = 'Other';
+        if (b._id === 0) label = 'Under ₹5L';
+        else if (b._id === 500000) label = '₹5L – ₹10L';
+        else if (b._id === 1000000) label = '₹10L – ₹20L';
+        else if (b._id === 2000000) label = '₹20L – ₹30L';
+        else if (b._id === 3000000) label = '₹30L+';
+        return { id: String(b._id), label, count: b.count };
+      });
+
+      const experienceLevels = (facetData.experienceLevels || []).map((b: any) => {
+        let label = 'Other';
+        if (b._id === 0) label = 'Entry (0-2 yrs)';
+        else if (b._id === 3) label = 'Mid (3-5 yrs)';
+        else if (b._id === 6) label = 'Senior (6+ yrs)';
+        return { id: String(b._id), label, count: b.count };
+      });
+
+      return reply.send({
+        listings: docs.map((doc: any) => ({
+          id: String(doc._id),
+          title: doc.title,
+          company: doc.company || '',
+          companyLogoUrl: doc.companyLogoUrl || '',
+          department: doc.department || '',
+          location: doc.location || '',
+          employmentType: doc.employmentType || 'FULL_TIME',
+          description: (doc.description || '').slice(0, 300),
+          salaryMin: Number(doc.salaryMin || 0),
+          salaryMax: Number(doc.salaryMax || 0),
+          salaryCurrency: doc.salaryCurrency || 'INR',
+          salaryLabel: salaryLabel(Number(doc.salaryMin || 0), Number(doc.salaryMax || 0), doc.salaryCurrency || 'INR'),
+          experienceMin: Number(doc.experienceMin || 0),
+          experienceMax: Number(doc.experienceMax || 0),
+          skills: Array.isArray(doc.skills) ? doc.skills : [],
+          featured: Boolean(doc.featured),
+          applicationCount: Number(doc.applicationCount || 0),
+          createdAt: toIso(doc.createdAt),
+          score: doc.score !== undefined ? Number(doc.score) : undefined,
+        })),
+        facets: {
+          locations: (facetData.locations || []).map((l: any) => ({ label: l._id, count: l.count })),
+          skills: (facetData.skills || []).map((s: any) => ({ label: s._id, count: s.count })),
+          employmentTypes: (facetData.employmentTypes || []).map((e: any) => ({ label: e._id, count: e.count })),
+          salaryRanges,
+          experienceLevels
+        },
+        total,
+        limit,
+        offset,
+      });
+    } catch (err: any) {
+      // Robust fallback if native $search is triggered on environment with unconfigured default search index
+      // Converts query gracefully to regex text search to prevent platform crashes
+      const fallbackFilter: any = { status: 'ACTIVE' };
+      if (q) {
+        fallbackFilter.$or = [
+          { title: { $regex: q, $options: 'i' } },
+          { company: { $regex: q, $options: 'i' } },
+          { description: { $regex: q, $options: 'i' } },
+        ];
+      }
+      if (location) {
+        fallbackFilter.location = { $regex: location, $options: 'i' };
+      }
+      if (type && type !== 'ALL') {
+        fallbackFilter.employmentType = type;
+      }
+      if (skills) {
+        const skillList = skills.split(',').map(s => s.trim()).filter(Boolean);
+        if (skillList.length) fallbackFilter.skills = { $in: skillList };
+      }
+      if (salaryMin) {
+        fallbackFilter.salaryMax = { $gte: salaryMin };
+      }
+      if (salaryMax) {
+        fallbackFilter.salaryMin = { ...(fallbackFilter.salaryMin || {}), $lte: salaryMax };
+      }
+
+      const sortOption: Record<string, 1 | -1> = sort === 'salary_high'
+        ? { salaryMax: -1 }
+        : sort === 'salary_low'
+          ? { salaryMin: 1 }
+          : { createdAt: -1 };
+
+      const listings = db.collection('job_listings');
+      const docs = await listings.find(fallbackFilter).sort(sortOption).skip(offset).limit(limit).toArray();
+      const total = await listings.countDocuments(fallbackFilter);
+
+      return reply.send({
+        listings: docs.map((doc: any) => ({
+          id: String(doc._id),
+          title: doc.title,
+          company: doc.company || '',
+          companyLogoUrl: doc.companyLogoUrl || '',
+          department: doc.department || '',
+          location: doc.location || '',
+          employmentType: doc.employmentType || 'FULL_TIME',
+          description: (doc.description || '').slice(0, 300),
+          salaryMin: Number(doc.salaryMin || 0),
+          salaryMax: Number(doc.salaryMax || 0),
+          salaryCurrency: doc.salaryCurrency || 'INR',
+          salaryLabel: salaryLabel(Number(doc.salaryMin || 0), Number(doc.salaryMax || 0), doc.salaryCurrency || 'INR'),
+          experienceMin: Number(doc.experienceMin || 0),
+          experienceMax: Number(doc.experienceMax || 0),
+          skills: Array.isArray(doc.skills) ? doc.skills : [],
+          featured: Boolean(doc.featured),
+          applicationCount: Number(doc.applicationCount || 0),
+          createdAt: toIso(doc.createdAt),
+        })),
+        facets: {
+          locations: [],
+          skills: [],
+          employmentTypes: [],
+          salaryRanges: [],
+          experienceLevels: []
+        },
+        total,
+        limit,
+        offset,
+      });
+    }
   });
 
   // GET /api/jobs/listings/:id — Single job detail (public)
