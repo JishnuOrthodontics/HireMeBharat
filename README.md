@@ -4,7 +4,7 @@
 
 HireMeBharat is a premium, concierge-style recruitment and talent-matching platform. It serves three distinct users:
 1. **Employees:** Professionals seeking high-quality job opportunities and curated matches.
-2. **Employers:** Companies and recruiters seeking top-tier talent through a streamlined requisition process.
+2. **Employers:** Companies and recruiters seeking top-tier talent through streamlined job listings and hiring pipelines.
 3. **Admins (Concierge):** Internal staff who provide white-glove mediation, matching, and support.
 
 This project is built as a modern full-stack web application utilizing a unified monorepo structure with a microservices-based backend.
