@@ -10,7 +10,7 @@ import EmployeeApplications from './EmployeeApplications';
 import EmployeeOffers from './EmployeeOffers';
 import EmployeeInterviews from './EmployeeInterviews';
 import EmployeeFeedback from './EmployeeFeedback';
-import { useEmployeeProfile, useEmployeeDashboardSummary, useNotifications, useEmployeeMatches } from '../../hooks/useEmployeeQueries';
+import { useEmployeeProfile, useEmployeeDashboardSummary, useNotifications, useEmployeeMatches, useConciergeMessages } from '../../hooks/useEmployeeQueries';
 import { type EmployeeProfileApi } from '../../lib/employeeApi';
 import './Employee.css';
 
@@ -24,7 +24,19 @@ const navItems = [
 ];
 
 /* ===== Left Sidebar ===== */
-function LeftSidebar({ profile, activeMatches, interviews }: { profile: EmployeeProfileApi | null | undefined; activeMatches: number; interviews: number }) {
+function LeftSidebar({
+  profile,
+  activeMatches,
+  interviews,
+  matchScore,
+  savedCount,
+}: {
+  profile: EmployeeProfileApi | null | undefined;
+  activeMatches: number;
+  interviews: number;
+  matchScore: number;
+  savedCount: number;
+}) {
   const initials = (profile?.displayName || 'Employee')
     .split(' ')
     .map((s: string) => s[0])
@@ -44,7 +56,7 @@ function LeftSidebar({ profile, activeMatches, interviews }: { profile: Employee
           </p>
           <div className="dash-profile-stats">
             <div className="dash-profile-stat">
-              <div className="dash-profile-stat-value">{Math.max(0, Math.min(100, Math.round((activeMatches * 13 + 67) % 100)))}</div>
+              <div className="dash-profile-stat-value">{matchScore}%</div>
               <div className="dash-profile-stat-label">Match Score</div>
             </div>
             <div className="dash-profile-stat">
@@ -65,7 +77,7 @@ function LeftSidebar({ profile, activeMatches, interviews }: { profile: Employee
           <Link to="/employee/matches?status=SAVED" className="dash-quick-link">
             <span className="material-symbols-outlined">bookmark</span>
             Saved Roles
-            <span className="dash-quick-link-badge">7</span>
+            <span className="dash-quick-link-badge">{savedCount}</span>
           </Link>
           <Link to="/employee/market-insights" className="dash-quick-link">
             <span className="material-symbols-outlined">trending_up</span>
@@ -140,12 +152,12 @@ function EmployeeSettings() {
 /* ===== Right Sidebar ===== */
 function RightSidebar({
   notifications,
-  conciergeName,
+  concierge,
   unread,
   activeMatches,
 }: {
   notifications: Array<{ id: string; title: string; createdAt?: string | null }>;
-  conciergeName: string;
+  concierge: { name: string; title: string; initials: string; online: boolean };
   unread: number;
   activeMatches: number;
 }) {
@@ -155,16 +167,16 @@ function RightSidebar({
       <div className="dash-card">
         <div className="dash-card-header">
           <span className="dash-card-title">Your Concierge</span>
-          <span className="emp-online-dot" />
+          {concierge.online && <span className="emp-online-dot" />}
         </div>
         <div className="dash-card-body">
           <div className="emp-concierge-widget">
-            <div className="emp-concierge-avatar">SJ</div>
+            <div className="emp-concierge-avatar">{concierge.initials || 'SJ'}</div>
             <div>
-              <p style={{ fontWeight: 600, fontSize: 14 }}>{conciergeName || 'Talent Concierge'}</p>
-              <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>Senior Talent Concierge</p>
+              <p style={{ fontWeight: 600, fontSize: 14 }}>{concierge.name || 'Talent Concierge'}</p>
+              <p style={{ fontSize: 12, color: 'var(--color-on-surface-variant)' }}>{concierge.title || 'Senior Talent Concierge'}</p>
               <p className="emp-concierge-status">
-                <span className="emp-online-dot" /> Online now
+                <span className="emp-online-dot" style={{ backgroundColor: concierge.online ? 'var(--color-success)' : 'var(--color-on-surface-variant)' }} /> {concierge.online ? 'Online now' : 'Away'}
               </p>
             </div>
           </div>
@@ -257,7 +269,9 @@ export default function Dashboard() {
   const { data: profile } = useEmployeeProfile();
   const { data: summaryData } = useEmployeeDashboardSummary();
   const { data: notificationsData } = useNotifications();
-  const { data: matchesRes } = useEmployeeMatches({ status: 'ALL', limit: 1 });
+  const { data: matchesRes } = useEmployeeMatches({ status: 'ALL', limit: 25 });
+  const { data: savedMatchesRes } = useEmployeeMatches({ status: 'SAVED', limit: 1 });
+  const { data: conciergeData } = useConciergeMessages();
 
   const summary = {
     activeMatches: summaryData?.activeMatches ?? matchesRes?.total ?? 0,
@@ -271,17 +285,39 @@ export default function Dashboard() {
     createdAt: n.createdAt,
   }));
 
+  const topMatches = matchesRes?.matches || [];
+  const matchScore = topMatches.length > 0 
+    ? Math.round(topMatches.reduce((sum, m) => sum + m.score, 0) / topMatches.length)
+    : 88;
+
+  const savedCount = savedMatchesRes?.total ?? 0;
+
+  const concierge = conciergeData?.concierge || {
+    name: 'Sarah Jenkins',
+    title: 'Senior Talent Concierge',
+    initials: 'SJ',
+    online: true,
+  };
+
   return (
     <DashboardLayout
       navItems={navItems}
       role="employee"
       userName={profile?.displayName || 'Employee'}
       userTitle={profile?.headline || 'Job seeker'}
-      leftSidebar={<LeftSidebar profile={profile} activeMatches={summary.activeMatches} interviews={summary.interviews} />}
+      leftSidebar={
+        <LeftSidebar
+          profile={profile}
+          activeMatches={summary.activeMatches}
+          interviews={summary.interviews}
+          matchScore={matchScore}
+          savedCount={savedCount}
+        />
+      }
       rightSidebar={
         <RightSidebar
           notifications={notifications}
-          conciergeName="Sarah Jenkins"
+          concierge={concierge}
           unread={summary.unreadNotifications}
           activeMatches={summary.activeMatches}
         />
