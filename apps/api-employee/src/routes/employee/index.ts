@@ -50,6 +50,12 @@ const matchesQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+const notificationsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+
 const visibilityPatchSchema = z.object({
   openToWork: z.boolean().optional(),
   openToWorkVisibility: z.enum(['RECRUITERS_ONLY', 'PRIVATE']).optional(),
@@ -605,14 +611,23 @@ export async function employeeRoutes(app: FastifyInstance) {
 
   // GET /api/employee/notifications
   app.get('/notifications', async (request, reply) => {
+    const parsed = notificationsQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    const filter = { userUid: uid };
     const docs = await db.collection('notifications')
-      .find({ userUid: uid })
+      .find(filter)
       .sort({ createdAt: -1 })
-      .limit(100)
+      .skip(offset)
+      .limit(limit)
       .toArray();
+    const total = await db.collection('notifications').countDocuments(filter);
+
     return reply.send({
       notifications: docs.map((n) => ({
         id: String(n._id),
@@ -622,8 +637,12 @@ export async function employeeRoutes(app: FastifyInstance) {
         read: Boolean(n.read),
         createdAt: toIso(n.createdAt),
       })),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // POST /api/employee/notifications/:id/read
   app.post('/notifications/:id/read', async (request, reply) => {

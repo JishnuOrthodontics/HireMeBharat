@@ -17,6 +17,12 @@ const updateCandidateStageSchema = z.object({
   notes: z.string().max(1000).optional(),
 });
 
+const activityQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+
 const profilePatchSchema = z.object({
   companyName: z.string().min(2).max(200).optional(),
   tagline: z.string().max(300).optional(),
@@ -306,10 +312,23 @@ export async function employerRoutes(app: FastifyInstance) {
 
   // GET /api/employer/activity
   app.get('/activity', async (request, reply) => {
+    const parsed = activityQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    const docs = await db.collection('employer_activity').find({ employerUid: uid }).sort({ createdAt: -1 }).limit(20).toArray();
+
+    const filter = { employerUid: uid };
+    const docs = await db.collection('employer_activity')
+      .find(filter)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray();
+    const total = await db.collection('employer_activity').countDocuments(filter);
+
     return reply.send({
       activity: docs.map((a) => ({
         id: String(a._id),
@@ -317,8 +336,12 @@ export async function employerRoutes(app: FastifyInstance) {
         text: a.text || '',
         createdAt: toIso(a.createdAt),
       })),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // GET /api/employer/profile
   app.get('/profile', async (request, reply) => {

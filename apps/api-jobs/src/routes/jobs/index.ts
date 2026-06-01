@@ -87,6 +87,12 @@ const adminListingsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+const basicPaginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 function toIso(value: unknown): string | null {
@@ -634,15 +640,22 @@ export async function jobsRoutes(app: FastifyInstance) {
   app.get('/applications', {
     preHandler: [app.authenticate, app.requireRole('EMPLOYEE')],
   }, async (request, reply) => {
+    const parsed = basicPaginationQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
+    const filter = { applicantUid: uid };
     const docs = await db.collection('job_applications')
-      .find({ applicantUid: uid })
+      .find(filter)
       .sort({ appliedAt: -1 })
-      .limit(100)
+      .skip(offset)
+      .limit(limit)
       .toArray();
+    const total = await db.collection('job_applications').countDocuments(filter);
 
     // Fetch job details for each application
     const jobIds = [...new Set(docs.map(d => d.jobId).filter(Boolean))];
@@ -670,8 +683,12 @@ export async function jobsRoutes(app: FastifyInstance) {
           updatedAt: toIso(doc.updatedAt),
         };
       }),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // GET /api/jobs/applications/:id — Single application detail
   app.get('/applications/:id', {
@@ -733,15 +750,22 @@ export async function jobsRoutes(app: FastifyInstance) {
   app.get('/offers', {
     preHandler: [app.authenticate, app.requireRole('EMPLOYEE')],
   }, async (request, reply) => {
+    const parsed = basicPaginationQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
+    const filter = { applicantUid: uid };
     const docs = await db.collection('job_offers')
-      .find({ applicantUid: uid })
+      .find(filter)
       .sort({ createdAt: -1 })
-      .limit(50)
+      .skip(offset)
+      .limit(limit)
       .toArray();
+    const total = await db.collection('job_offers').countDocuments(filter);
 
     const jobIds = [...new Set(docs.map(d => d.jobId).filter(Boolean))];
     const jobDocs = jobIds.length
@@ -771,8 +795,12 @@ export async function jobsRoutes(app: FastifyInstance) {
           respondedAt: toIso(doc.respondedAt),
         };
       }),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // POST /api/jobs/offers/:id/respond — Accept or reject offer
   app.post('/offers/:id/respond', {
@@ -826,15 +854,22 @@ export async function jobsRoutes(app: FastifyInstance) {
   app.get('/interviews', {
     preHandler: [app.authenticate, app.requireRole('EMPLOYEE')],
   }, async (request, reply) => {
+    const parsed = basicPaginationQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
+    const filter = { applicantUid: uid, scheduledAt: { $gte: new Date() } };
     const docs = await db.collection('job_interviews')
-      .find({ applicantUid: uid, scheduledAt: { $gte: new Date() } })
+      .find(filter)
       .sort({ scheduledAt: 1 })
-      .limit(20)
+      .skip(offset)
+      .limit(limit)
       .toArray();
+    const total = await db.collection('job_interviews').countDocuments(filter);
 
     const jobIds = [...new Set(docs.map(d => d.jobId).filter(Boolean))];
     const jobDocs = jobIds.length
@@ -859,8 +894,12 @@ export async function jobsRoutes(app: FastifyInstance) {
           meetingLink: doc.meetingLink || '',
         };
       }),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // POST /api/jobs/feedback — Platform feedback (EMPLOYEE or EMPLOYER)
   app.post('/feedback', {
@@ -893,15 +932,22 @@ export async function jobsRoutes(app: FastifyInstance) {
   app.get('/employer/listings', {
     preHandler: [app.authenticate, app.requireRole('EMPLOYER')],
   }, async (request, reply) => {
+    const parsed = basicPaginationQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
+    const filter = { employerUid: uid };
     const docs = await db.collection('job_listings')
-      .find({ employerUid: uid })
+      .find(filter)
       .sort({ createdAt: -1 })
-      .limit(100)
+      .skip(offset)
+      .limit(limit)
       .toArray();
+    const total = await db.collection('job_listings').countDocuments(filter);
 
     return reply.send({
       listings: docs.map(doc => ({
@@ -929,8 +975,12 @@ export async function jobsRoutes(app: FastifyInstance) {
         createdAt: toIso(doc.createdAt),
         updatedAt: toIso(doc.updatedAt),
       })),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // POST /api/jobs/listings — Create a new job listing (EMPLOYER)
   app.post('/listings', {
@@ -1223,15 +1273,22 @@ export async function jobsRoutes(app: FastifyInstance) {
   app.get('/employer/offers', {
     preHandler: [app.authenticate, app.requireRole('EMPLOYER')],
   }, async (request, reply) => {
+    const parsed = basicPaginationQuerySchema.safeParse(request.query ?? {});
+    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
+    const { limit, offset } = parsed.data;
+
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
+    const filter = { employerUid: uid };
     const docs = await db.collection('job_offers')
-      .find({ employerUid: uid })
+      .find(filter)
       .sort({ createdAt: -1 })
-      .limit(100)
+      .skip(offset)
+      .limit(limit)
       .toArray();
+    const total = await db.collection('job_offers').countDocuments(filter);
 
     // Fetch applicant and job info
     const applicantUids = [...new Set(docs.map(d => d.applicantUid).filter(Boolean))];
@@ -1267,8 +1324,12 @@ export async function jobsRoutes(app: FastifyInstance) {
           respondedAt: toIso(doc.respondedAt),
         };
       }),
+      total,
+      limit,
+      offset,
     });
   });
+
 
   // ════════════════════════════════════════════════════════════════════
   //  ADMIN ROUTES
