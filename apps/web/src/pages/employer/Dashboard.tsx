@@ -2,7 +2,6 @@ import { Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import EmployerFeed from './EmployerFeed';
-import EmployerRequisitions from './EmployerRequisitions';
 import EmployerCandidates from './EmployerCandidates';
 import EmployerProfile from './EmployerProfile';
 import EmployerJobListings from './EmployerJobListings';
@@ -19,7 +18,6 @@ import './Employer.css';
 
 const navItems = [
   { icon: 'home', label: 'Home', path: '/employer' },
-  { icon: 'work', label: 'Requisitions', path: '/employer/requisitions', badge: 2 },
   { icon: 'groups', label: 'Candidates', path: '/employer/candidates', badge: 8 },
   { icon: 'assignment', label: 'Job Listings', path: '/employer/job-listings' },
   { icon: 'rate_review', label: 'Applications', path: '/employer/applications' },
@@ -75,13 +73,13 @@ function LeftSidebar({ profile, summary }: { profile: EmployerProfileApi | null;
       {/* Quick Actions */}
       <div className="dash-card">
         <div className="dash-quick-links">
-          <Link to="/employer/requisitions" className="dash-quick-link">
+          <Link to="/employer/job-listings" className="dash-quick-link">
             <span className="material-symbols-outlined">add_circle</span>
             Post a New Role
           </Link>
-          <Link to="/employer/requisitions?status=DRAFT" className="dash-quick-link">
+          <Link to="/employer/job-listings" className="dash-quick-link">
             <span className="material-symbols-outlined">description</span>
-            Job Templates
+            Manage Jobs
           </Link>
           <Link to="/employer/candidates?stage=INTERVIEW" className="dash-quick-link">
             <span className="material-symbols-outlined">calendar_today</span>
@@ -247,7 +245,6 @@ export default function Dashboard() {
     >
       <Routes>
         <Route index element={<EmployerFeed />} />
-        <Route path="requisitions" element={<EmployerRequisitions />} />
         <Route path="candidates" element={<EmployerCandidates />} />
         <Route path="job-listings" element={<EmployerJobListings />} />
         <Route path="applications" element={<EmployerApplicationReview />} />

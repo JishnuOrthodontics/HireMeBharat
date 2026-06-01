@@ -3,32 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import '@hiremebharat/backend-core';
 
-const requisitionStatusSchema = z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'FILLED', 'CLOSED']);
 const candidateStageSchema = z.enum(['SOURCED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']);
-
-const requisitionsQuerySchema = z.object({
-  status: requisitionStatusSchema.or(z.literal('ALL')).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
-const createRequisitionSchema = z.object({
-  title: z.string().min(3).max(160),
-  department: z.string().min(2).max(120),
-  location: z.string().min(2).max(160),
-  employmentType: z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT']).default('FULL_TIME'),
-  description: z.string().min(10).max(5000),
-  requirements: z.array(z.string().min(1).max(200)).max(50).default([]),
-  salaryMin: z.number().min(0).default(0),
-  salaryMax: z.number().min(0).default(0),
-  salaryCurrency: z.string().min(3).max(8).default('USD'),
-  status: requisitionStatusSchema.default('DRAFT'),
-  featured: z.boolean().optional(),
-});
-
-const patchRequisitionSchema = createRequisitionSchema.partial().extend({
-  status: requisitionStatusSchema.optional(),
-});
 
 const candidatesQuerySchema = z.object({
   stage: candidateStageSchema.or(z.literal('ALL')).optional(),
@@ -81,263 +56,12 @@ export async function employerRoutes(app: FastifyInstance) {
     await Promise.all([
       db.collection('users').createIndex({ uid: 1 }, { unique: true }),
       db.collection('employer_profiles').createIndex({ employerUid: 1 }, { unique: true }),
-      db.collection('employer_requisitions').createIndex({ employerUid: 1, status: 1, updatedAt: -1 }),
       db.collection('employer_candidates').createIndex({ employerUid: 1, stage: 1, updatedAt: -1 }),
       db.collection('employer_candidates').createIndex({ employerUid: 1, requisitionId: 1, stage: 1 }),
       db.collection('employer_matches').createIndex({ employerUid: 1, score: -1 }),
       db.collection('employer_interviews').createIndex({ employerUid: 1, scheduledAt: 1 }),
       db.collection('employer_activity').createIndex({ employerUid: 1, createdAt: -1 }),
     ]);
-  });
-
-  async function seedEmployerData(employerUid: string) {
-    const db = app.mongo?.db;
-    if (!db) return;
-    const requisitions = db.collection('employer_requisitions');
-    const existing = await requisitions.countDocuments({ employerUid }, { limit: 1 });
-    if (existing) return;
-    const now = new Date();
-
-    const requisitionDocs = [
-      {
-        employerUid,
-        title: 'VP of Product Engineering',
-        department: 'Engineering',
-        location: 'San Francisco · Hybrid',
-        employmentType: 'FULL_TIME',
-        description: 'Lead product engineering across platform and AI teams.',
-        requirements: ['Leadership', 'Distributed Systems', 'AI/ML'],
-        salaryMin: 240000,
-        salaryMax: 300000,
-        salaryCurrency: 'USD',
-        status: 'ACTIVE',
-        featured: true,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        employerUid,
-        title: 'Head of AI/ML',
-        department: 'AI Research',
-        location: 'New York · Remote',
-        employmentType: 'FULL_TIME',
-        description: 'Own AI roadmap and lead applied research.',
-        requirements: ['Research', 'Team Building', 'MLOps'],
-        salaryMin: 220000,
-        salaryMax: 280000,
-        salaryCurrency: 'USD',
-        status: 'ACTIVE',
-        featured: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        employerUid,
-        title: 'Director of Engineering',
-        department: 'Platform',
-        location: 'Seattle · Hybrid',
-        employmentType: 'FULL_TIME',
-        description: 'Scale platform reliability and developer experience.',
-        requirements: ['Kubernetes', 'SaaS', 'Leadership'],
-        salaryMin: 200000,
-        salaryMax: 260000,
-        salaryCurrency: 'USD',
-        status: 'PAUSED',
-        featured: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
-
-    const inserted = await requisitions.insertMany(requisitionDocs);
-    const reqIds = Object.values(inserted.insertedIds).map((id) => String(id));
-
-    await db.collection('employer_candidates').insertMany([
-      {
-        employerUid,
-        requisitionId: reqIds[0],
-        employeeUid: `seed-emp-${employerUid}-1`,
-        name: 'E. Thompson',
-        title: 'SVP Engineering · ex-Meta',
-        initials: 'ET',
-        score: 94,
-        skills: ['Machine Learning', 'Scale-ups', 'M&A'],
-        compensation: '$280k - $320k',
-        roleTarget: 'VP Engineering',
-        stage: 'INTERVIEW',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        employerUid,
-        requisitionId: reqIds[1],
-        employeeUid: `seed-emp-${employerUid}-2`,
-        name: 'M. Chen',
-        title: 'Head of AI · ex-Google',
-        initials: 'MC',
-        score: 91,
-        skills: ['AI/ML', 'Research', 'Team Building'],
-        compensation: '$250k - $300k',
-        roleTarget: 'Head of AI',
-        stage: 'SCREENING',
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        employerUid,
-        requisitionId: reqIds[0],
-        employeeUid: `seed-emp-${employerUid}-3`,
-        name: 'S. Williams',
-        title: 'Director of Eng · Stripe',
-        initials: 'SW',
-        score: 87,
-        skills: ['Payments', 'Distributed Systems', 'Go'],
-        compensation: '$220k - $270k',
-        roleTarget: 'Director of Engineering',
-        stage: 'OFFER',
-        createdAt: now,
-        updatedAt: now,
-      },
-    ]);
-
-    await db.collection('employer_matches').insertMany([
-      { employerUid, requisitionId: reqIds[0], candidateName: 'E. Thompson', score: 94, status: 'INTERVIEW', createdAt: now, updatedAt: now },
-      { employerUid, requisitionId: reqIds[1], candidateName: 'M. Chen', score: 91, status: 'SCREENING', createdAt: now, updatedAt: now },
-    ]);
-
-    await db.collection('employer_interviews').insertMany([
-      { employerUid, candidateName: 'E. Thompson', role: 'VP Engineering', type: 'Video', scheduledAt: new Date(now.getTime() + 86400000) },
-      { employerUid, candidateName: 'M. Chen', role: 'Head of AI', type: 'On-site', scheduledAt: new Date(now.getTime() + 2 * 86400000) },
-    ]);
-
-    await db.collection('employer_activity').insertMany([
-      { employerUid, icon: 'person_add', text: 'E. Thompson was shortlisted for VP Engineering', createdAt: now },
-      { employerUid, icon: 'event', text: 'Interview scheduled with M. Chen', createdAt: new Date(now.getTime() - 3600000) },
-      { employerUid, icon: 'analytics', text: 'Monthly hiring report is ready for review', createdAt: new Date(now.getTime() - 2 * 3600000) },
-    ]);
-  }
-
-  // GET /api/employer/requisitions
-  app.get('/requisitions', async (request, reply) => {
-    const parsed = requisitionsQuerySchema.safeParse(request.query ?? {});
-    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid query' });
-    const uid = request.user!.uid;
-    const db = app.mongo?.db;
-    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    await seedEmployerData(uid);
-
-    const { status, limit, offset } = parsed.data;
-    const filter: Record<string, unknown> = { employerUid: uid };
-    if (status && status !== 'ALL') filter.status = status;
-
-    const requisitions = db.collection('employer_requisitions');
-    const candidates = db.collection('employer_candidates');
-    const docs = await requisitions.find(filter).sort({ updatedAt: -1 }).skip(offset).limit(limit).toArray();
-    const total = await requisitions.countDocuments(filter);
-    const reqIds = docs.map((d) => String(d._id));
-    const pipelineCounts = reqIds.length
-      ? await candidates.aggregate([
-        { $match: { employerUid: uid, requisitionId: { $in: reqIds } } },
-        { $group: { _id: '$requisitionId', count: { $sum: 1 } } },
-      ]).toArray()
-      : [];
-    const byReq = new Map(pipelineCounts.map((x) => [String(x._id), Number(x.count)]));
-
-    return reply.send({
-      requisitions: docs.map((doc) => ({
-        id: String(doc._id),
-        title: doc.title,
-        department: doc.department || '',
-        location: doc.location || '',
-        employmentType: doc.employmentType || 'FULL_TIME',
-        description: doc.description || '',
-        requirements: Array.isArray(doc.requirements) ? doc.requirements : [],
-        salaryMin: Number(doc.salaryMin || 0),
-        salaryMax: Number(doc.salaryMax || 0),
-        salaryCurrency: doc.salaryCurrency || 'USD',
-        salaryLabel: `$${Math.round((doc.salaryMin || 0) / 1000)}k - $${Math.round((doc.salaryMax || 0) / 1000)}k`,
-        status: doc.status,
-        featured: Boolean(doc.featured),
-        candidatesInPipeline: byReq.get(String(doc._id)) || 0,
-        createdAt: toIso(doc.createdAt),
-        updatedAt: toIso(doc.updatedAt),
-      })),
-      total,
-      limit,
-      offset,
-    });
-  });
-
-  // POST /api/employer/requisitions
-  app.post('/requisitions', async (request, reply) => {
-    const parsed = createRequisitionSchema.safeParse(request.body ?? {});
-    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: parsed.error.issues[0]?.message || 'Invalid payload' });
-    const uid = request.user!.uid;
-    const db = app.mongo?.db;
-    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    const now = new Date();
-    const doc = { ...parsed.data, employerUid: uid, createdAt: now, updatedAt: now };
-    const insert = await db.collection('employer_requisitions').insertOne(doc);
-    await db.collection('employer_activity').insertOne({
-      employerUid: uid,
-      icon: 'add_circle',
-      text: `New requisition created: ${doc.title}`,
-      createdAt: now,
-    });
-    return reply.code(201).send({
-      requisition: {
-        id: String(insert.insertedId),
-        ...parsed.data,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      },
-    });
-  });
-
-  // PATCH /api/employer/requisitions/:id
-  app.patch('/requisitions/:id', async (request, reply) => {
-    const id = (request.params as any)?.id;
-    if (!ObjectId.isValid(id)) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid requisition id' });
-    const parsed = patchRequisitionSchema.safeParse(request.body ?? {});
-    if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: parsed.error.issues[0]?.message || 'Invalid payload' });
-    const uid = request.user!.uid;
-    const db = app.mongo?.db;
-    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    const now = new Date();
-    const result = await db.collection('employer_requisitions').updateOne(
-      { _id: new ObjectId(id), employerUid: uid },
-      { $set: { ...parsed.data, updatedAt: now } }
-    );
-    if (!result.matchedCount) return reply.code(404).send({ error: 'Not Found', message: 'Requisition not found' });
-    return reply.send({ ok: true });
-  });
-
-  // DELETE /api/employer/requisitions/:id
-  app.delete('/requisitions/:id', async (request, reply) => {
-    const id = (request.params as any)?.id;
-    if (!ObjectId.isValid(id)) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid requisition id' });
-    const uid = request.user!.uid;
-    const db = app.mongo?.db;
-    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-
-    const reqId = new ObjectId(id);
-    const requisitions = db.collection('employer_requisitions');
-    const requisitionDoc = await requisitions.findOne({ _id: reqId, employerUid: uid });
-    if (!requisitionDoc) return reply.code(404).send({ error: 'Not Found', message: 'Requisition not found' });
-
-    await requisitions.deleteOne({ _id: reqId, employerUid: uid });
-    await Promise.all([
-      db.collection('employer_candidates').deleteMany({ employerUid: uid, requisitionId: id }),
-      db.collection('employer_matches').deleteMany({ employerUid: uid, requisitionId: id }),
-    ]);
-    await db.collection('employer_activity').insertOne({
-      employerUid: uid,
-      icon: 'delete',
-      text: `Requisition deleted: ${requisitionDoc.title || 'Untitled role'}`,
-      createdAt: new Date(),
-    });
-
-    return reply.send({ ok: true });
   });
 
   // GET /api/employer/candidates
@@ -347,7 +71,6 @@ export async function employerRoutes(app: FastifyInstance) {
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    await seedEmployerData(uid);
     const { stage, requisitionId, limit, offset } = parsed.data;
 
     const filter: Record<string, unknown> = { employerUid: uid };
@@ -408,7 +131,6 @@ export async function employerRoutes(app: FastifyInstance) {
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    await seedEmployerData(uid);
     const docs = await db.collection('employer_candidates')
       .find({ employerUid: uid })
       .sort({ score: -1, updatedAt: -1 })
@@ -431,18 +153,18 @@ export async function employerRoutes(app: FastifyInstance) {
   });
 
   // GET /api/employer/dashboard-summary
+  // Uses job_listings (single source of truth) for open roles count
   app.get('/dashboard-summary', async (request, reply) => {
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    await seedEmployerData(uid);
 
-    const requisitions = db.collection('employer_requisitions');
+    const jobListings = db.collection('job_listings');
     const candidates = db.collection('employer_candidates');
     const interviews = db.collection('employer_interviews');
 
     const [openRoles, pipelineTotal, hired, byStageAgg, avgScoreAgg, upcomingInterviews] = await Promise.all([
-      requisitions.countDocuments({ employerUid: uid, status: { $in: ['ACTIVE', 'PAUSED'] } }),
+      jobListings.countDocuments({ employerUid: uid, status: { $in: ['ACTIVE', 'PAUSED'] } }),
       candidates.countDocuments({ employerUid: uid }),
       candidates.countDocuments({ employerUid: uid, stage: 'HIRED' }),
       candidates.aggregate([
@@ -485,7 +207,6 @@ export async function employerRoutes(app: FastifyInstance) {
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
-    await seedEmployerData(uid);
     const docs = await db.collection('employer_activity').find({ employerUid: uid }).sort({ createdAt: -1 }).limit(20).toArray();
     return reply.send({
       activity: docs.map((a) => ({
@@ -573,4 +294,5 @@ export async function employerRoutes(app: FastifyInstance) {
     return reply.send({ ok: true });
   });
 }
+
 

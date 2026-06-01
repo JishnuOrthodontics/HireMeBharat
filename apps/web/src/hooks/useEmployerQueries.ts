@@ -1,46 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as employerApi from '../lib/employerApi';
 
-export function useEmployerRequisitions(params?: Parameters<typeof employerApi.getEmployerRequisitions>[0]) {
-  return useQuery({
-    queryKey: ['employer', 'requisitions', params],
-    queryFn: () => employerApi.getEmployerRequisitions(params),
-  });
-}
 
-export function useCreateEmployerRequisition() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: employerApi.createEmployerRequisition,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employer', 'requisitions'] });
-      queryClient.invalidateQueries({ queryKey: ['employer', 'dashboardSummary'] });
-    },
-  });
-}
-
-export function useUpdateEmployerRequisition() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ requisitionId, payload }: { requisitionId: string; payload: Partial<employerApi.EmployerRequisitionApi> }) =>
-      employerApi.patchEmployerRequisition(requisitionId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employer', 'requisitions'] });
-      queryClient.invalidateQueries({ queryKey: ['employer', 'dashboardSummary'] });
-    },
-  });
-}
-
-export function useDeleteEmployerRequisition() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: employerApi.deleteEmployerRequisition,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employer', 'requisitions'] });
-      queryClient.invalidateQueries({ queryKey: ['employer', 'dashboardSummary'] });
-    },
-  });
-}
 
 export function useEmployerCandidates(params?: Parameters<typeof employerApi.getEmployerCandidates>[0]) {
   return useQuery({

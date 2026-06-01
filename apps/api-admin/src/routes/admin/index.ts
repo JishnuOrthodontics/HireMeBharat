@@ -129,7 +129,7 @@ export async function adminRoutes(app: FastifyInstance) {
     await ensureEscalationsSeeded();
 
     const users = db.collection('users');
-    const requisitions = db.collection('employer_requisitions');
+    const jobListings = db.collection('job_listings');
     const escalations = db.collection('admin_escalations');
     const candidates = db.collection('employer_candidates');
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -150,7 +150,7 @@ export async function adminRoutes(app: FastifyInstance) {
       users.countDocuments({ role: 'EMPLOYER' }),
       users.countDocuments({ role: 'ADMIN' }),
       users.countDocuments({ createdAt: { $gte: since } }),
-      requisitions.countDocuments({ status: { $in: ['ACTIVE', 'PAUSED'] } }),
+      jobListings.countDocuments({ status: 'ACTIVE' }),
       escalations.countDocuments({ status: 'OPEN' }),
       escalations.countDocuments({ status: 'IN_PROGRESS' }),
       candidates.countDocuments({ createdAt: { $gte: since } }),
@@ -353,11 +353,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
     const users = db.collection('users');
-    const requisitions = db.collection('employer_requisitions');
+    const jobListings = db.collection('job_listings');
     const candidates = db.collection('employer_candidates');
     const [totalUsers, activeRequisitions, matchesMade, avgScoreRows] = await Promise.all([
       users.countDocuments({}),
-      requisitions.countDocuments({ status: { $in: ['ACTIVE', 'PAUSED'] } }),
+      jobListings.countDocuments({ status: 'ACTIVE' }),
       candidates.countDocuments({}),
       candidates.aggregate([{ $group: { _id: null, avg: { $avg: '$score' } } }]).toArray(),
     ]);

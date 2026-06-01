@@ -27,7 +27,6 @@ import './Admin.css';
 const navItems = [
   { icon: 'home', label: 'Home', path: '/admin' },
   { icon: 'group', label: 'Users', path: '/admin/users' },
-  { icon: 'work', label: 'Requisitions', path: '/admin/requisitions' },
   { icon: 'assignment', label: 'Job Portal', path: '/admin/job-portal' },
   { icon: 'flag', label: 'Escalations', path: '/admin/escalations', badge: 4 },
   { icon: 'analytics', label: 'Analytics', path: '/admin/analytics' },
@@ -84,7 +83,7 @@ function LeftSidebar({ summary }: { summary: AdminSummaryApi | null }) {
             </div>
             <div className="dash-profile-stat">
               <div className="dash-profile-stat-value" style={{ color: '#a78bfa' }}>{summary?.activeRequisitions ?? 0}</div>
-              <div className="dash-profile-stat-label">Active Reqs</div>
+              <div className="dash-profile-stat-label">Active Jobs</div>
             </div>
             <div className="dash-profile-stat">
               <div className="dash-profile-stat-value" style={{ color: '#a78bfa' }}>{summary?.escalationsOpen ?? 0}</div>
@@ -108,9 +107,9 @@ function LeftSidebar({ summary }: { summary: AdminSummaryApi | null }) {
             <span className="material-symbols-outlined">security</span>
             Escalations
           </Link>
-          <Link to="/admin/requisitions" className="dash-quick-link">
+          <Link to="/admin/job-portal" className="dash-quick-link">
             <span className="material-symbols-outlined">tune</span>
-            Requisition Oversight
+            Job Oversight
           </Link>
         </div>
       </div>
@@ -725,7 +724,6 @@ export default function Dashboard() {
         <Route path="users" element={<UsersPage />} />
         <Route path="escalations" element={<EscalationsPage />} />
         <Route path="job-portal" element={<JobPortalPage />} />
-        <Route path="requisitions" element={<ComingSoon title="Requisitions Oversight" />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="*" element={<AdminFeed summary={summary} escalations={escalationsPreview} />} />
       </Routes>

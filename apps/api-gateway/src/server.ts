@@ -105,16 +105,31 @@ async function buildApp() {
     }
   });
 
-  // Job Portal — public listings (no auth, GET only)
-  // Registered BEFORE the authenticated /api/jobs/* proxy so GET requests pass through
+  // ──────────────────────────────────────────────────────────────
+  // Job Portal proxies
+  // ORDER MATTERS: more-specific prefixes MUST be registered first.
+  // @fastify/http-proxy matches by longest-prefix, but registration
+  // order breaks ties. /api/jobs/listings (public, GET-only) is
+  // registered before /api/jobs (authenticated catch-all) so that
+  // unauthenticated browse requests pass through.
+  // ──────────────────────────────────────────────────────────────
+
+  // 1. Public job listings — no auth, read-only (GET / HEAD only)
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_JOBS,
     prefix: '/api/jobs/listings',
     rewritePrefix: '/api/jobs/listings',
     replyOptions: forwardAuthReplyOptions,
+    preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
+      // Only allow safe/read-only methods on the public endpoint
+      if (!['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+        reply.code(405).send({ error: 'Method Not Allowed', message: 'Public listings are read-only' });
+      }
+    },
   });
 
-  // Job Portal — authenticated routes (role checks handled inside api-jobs)
+  // 2. Authenticated /api/jobs catch-all — requires valid Firebase token
+  //    and at least one platform role (EMPLOYEE, EMPLOYER, or ADMIN).
   await app.register(httpProxy as any, {
     upstream: UPSTREAM_JOBS,
     prefix: '/api/jobs',
@@ -122,7 +137,8 @@ async function buildApp() {
     replyOptions: forwardAuthReplyOptions,
     preValidation: async (request: FastifyRequest, reply: FastifyReply) => {
       await app.authenticate(request, reply);
-    }
+      await app.requireRole('EMPLOYEE', 'EMPLOYER', 'ADMIN')(request, reply);
+    },
   });
 
   // --- Health Check ---

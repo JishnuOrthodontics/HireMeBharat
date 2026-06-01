@@ -19,19 +19,6 @@ export interface UserProfile {
   updatedAt: Date;
 }
 
-export interface Requisition {
-  _id?: string;
-  employerId: string;
-  title: string;
-  description: string;
-  requirements: string[];
-  location: string;
-  salaryRange: { min: number; max: number; currency: string };
-  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'FILLED' | 'CLOSED';
-  candidateIds: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 export type EmployerRequisitionStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'FILLED' | 'CLOSED';
 export type EmployerCandidateStage = 'SOURCED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';

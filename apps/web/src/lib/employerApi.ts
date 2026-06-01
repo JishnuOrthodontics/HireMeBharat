@@ -2,27 +2,7 @@ import { authRequest } from './apiClient';
 
 const request = authRequest;
 
-export type EmployerRequisitionStatus = 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'FILLED' | 'CLOSED';
 export type EmployerCandidateStage = 'SOURCED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
-
-export interface EmployerRequisitionApi {
-  id: string;
-  title: string;
-  department: string;
-  location: string;
-  employmentType: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
-  description: string;
-  requirements: string[];
-  salaryMin: number;
-  salaryMax: number;
-  salaryCurrency: string;
-  salaryLabel: string;
-  status: EmployerRequisitionStatus;
-  featured: boolean;
-  candidatesInPipeline: number;
-  createdAt?: string | null;
-  updatedAt?: string | null;
-}
 
 export interface EmployerCandidateApi {
   id: string;
@@ -99,49 +79,7 @@ export interface EmployerSummaryApi {
   upcomingInterviews: EmployerInterviewApi[];
 }
 
-export async function getEmployerRequisitions(params: { status?: string; limit?: number; offset?: number } = {}) {
-  const query = new URLSearchParams();
-  if (params.status) query.set('status', params.status);
-  if (params.limit) query.set('limit', String(params.limit));
-  if (params.offset) query.set('offset', String(params.offset));
-  const suffix = query.toString() ? `?${query.toString()}` : '';
-  return request<{ requisitions: EmployerRequisitionApi[]; total: number; limit: number; offset: number }>(
-    `/api/employer/requisitions${suffix}`
-  );
-}
 
-export async function createEmployerRequisition(payload: {
-  title: string;
-  department: string;
-  location: string;
-  employmentType?: 'FULL_TIME' | 'PART_TIME' | 'CONTRACT';
-  description: string;
-  requirements?: string[];
-  salaryMin?: number;
-  salaryMax?: number;
-  salaryCurrency?: string;
-  status?: EmployerRequisitionStatus;
-}) {
-  return request<{ requisition: EmployerRequisitionApi }>('/api/employer/requisitions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function patchEmployerRequisition(requisitionId: string, payload: Partial<EmployerRequisitionApi>) {
-  return request<{ ok: boolean }>(`/api/employer/requisitions/${requisitionId}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function deleteEmployerRequisition(requisitionId: string) {
-  return request<{ ok: boolean }>(`/api/employer/requisitions/${requisitionId}`, {
-    method: 'DELETE',
-  });
-}
 
 export async function getEmployerCandidates(params: { stage?: string; requisitionId?: string; limit?: number; offset?: number } = {}) {
   const query = new URLSearchParams();

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getEmployerJobListings, createJobListing, patchJobListing, deleteJobListing, type JobListingApi } from '../../lib/jobsApi';
-import { getEmployerRequisitions, type EmployerRequisitionApi } from '../../lib/employerApi';
 import '../jobs/Jobs.css';
 
 const TABS = ['ALL', 'ACTIVE', 'DRAFT', 'PAUSED', 'FILLED', 'CLOSED'] as const;
@@ -9,7 +8,6 @@ type StatusTab = typeof TABS[number];
 export default function EmployerJobListings() {
   const [activeTab, setActiveTab] = useState<StatusTab>('ALL');
   const [listings, setListings] = useState<JobListingApi[]>([]);
-  const [requisitions, setRequisitions] = useState<EmployerRequisitionApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
@@ -34,19 +32,13 @@ export default function EmployerJobListings() {
   const [formSkillsText, setFormSkillsText] = useState('');
   const [formStatus, setFormStatus] = useState<string>('DRAFT');
   const [formFeatured, setFormFeatured] = useState(false);
-  const [selectedReqId, setSelectedReqId] = useState('');
 
   const loadData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [listingsRes, reqsRes] = await Promise.all([
-        getEmployerJobListings(),
-        getEmployerRequisitions({ limit: 100 })
-      ]);
+      const listingsRes = await getEmployerJobListings();
       setListings(listingsRes.listings || []);
-      // Keep only active/paused requisitions for promotion
-      setRequisitions(reqsRes.requisitions?.filter(r => r.status === 'ACTIVE' || r.status === 'PAUSED') || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load data');
     } finally {
@@ -75,7 +67,6 @@ export default function EmployerJobListings() {
     setFormSkillsText('');
     setFormStatus('DRAFT');
     setFormFeatured(false);
-    setSelectedReqId('');
     setModalOpen(true);
   };
 
@@ -96,28 +87,7 @@ export default function EmployerJobListings() {
     setFormSkillsText(listing.skills ? listing.skills.join(', ') : '');
     setFormStatus(listing.status || 'DRAFT');
     setFormFeatured(listing.featured || false);
-    setSelectedReqId('');
     setModalOpen(true);
-  };
-
-  const handleImportRequisition = (reqId: string) => {
-    setSelectedReqId(reqId);
-    if (!reqId) return;
-    const req = requisitions.find(r => r.id === reqId);
-    if (req) {
-      setFormTitle(req.title);
-      setFormDept(req.department || '');
-      setFormLoc(req.location);
-      if (['FULL_TIME', 'PART_TIME', 'CONTRACT'].includes(req.employmentType)) {
-        setFormType(req.employmentType as any);
-      }
-      setFormDesc(req.description || '');
-      setFormReqsText(Array.isArray(req.requirements) ? req.requirements.join('\n') : '');
-      setFormSalMin(String(req.salaryMin || ''));
-      setFormSalMax(String(req.salaryMax || ''));
-      setFormCurrency(req.salaryCurrency || 'INR');
-      setFormStatus('ACTIVE'); // Default active status for promoted reqs
-    }
   };
 
   const handleStatusChange = async (id: string, newStatus: string) => {
@@ -174,10 +144,6 @@ export default function EmployerJobListings() {
       featured: formFeatured,
     };
 
-    if (selectedReqId) {
-      payload.requisitionId = selectedReqId;
-    }
-
     try {
       if (editingListing) {
         await patchJobListing(editingListing.id, payload);
@@ -205,7 +171,7 @@ export default function EmployerJobListings() {
             Manage Job Listings
           </h2>
           <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)', marginTop: 4 }}>
-            Create and moderate your public-facing job board listings. Promote active requisitions to self-service.
+            Create and moderate your public-facing job board listings.
           </p>
         </div>
         <button className="btn btn-gold" onClick={handleOpenCreateModal}>
@@ -336,31 +302,7 @@ export default function EmployerJobListings() {
             
             <form onSubmit={handleSaveListing}>
               <div className="jobs-apply-modal-body">
-                {/* Promote Requisition option (only in Create mode) */}
-                {!editingListing && requisitions.length > 0 && (
-                  <div className="jobs-apply-field" style={{ background: 'rgba(255,255,255,0.03)', padding: 14, borderRadius: 'var(--radius-default)', border: '1px solid rgba(255,255,255,0.06)', marginBottom: 20 }}>
-                    <label style={{ color: 'var(--color-secondary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>rocket_launch</span>
-                      Promote Existing Requisition
-                    </label>
-                    <select 
-                      className="glass-input" 
-                      value={selectedReqId}
-                      onChange={e => handleImportRequisition(e.target.value)}
-                      style={{ marginTop: 8 }}
-                    >
-                      <option value="">-- Choose Requisition to Auto-populate --</option>
-                      {requisitions.map(r => (
-                        <option key={r.id} value={r.id}>
-                          {r.title} ({r.department || 'No Dept'}) - {r.location}
-                        </option>
-                      ))}
-                    </select>
-                    <small style={{ color: 'var(--color-on-surface-variant)', marginTop: 4, display: 'block' }}>
-                      Selecting a requisition will pre-fill the form with its description, salary, requirements, and location.
-                    </small>
-                  </div>
-                )}
+
 
                 <div className="empr-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div className="jobs-apply-field">

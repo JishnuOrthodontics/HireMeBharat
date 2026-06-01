@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { getEmployerProfile, getEmployerRequisitions, patchEmployerProfile, type EmployerProfileApi, type EmployerRequisitionApi } from '../../lib/employerApi';
+import { getEmployerProfile, patchEmployerProfile, type EmployerProfileApi } from '../../lib/employerApi';
+import { getEmployerJobListings, type JobListingApi } from '../../lib/jobsApi';
 
 function toBenefits(text: string) {
   return text
@@ -14,7 +15,7 @@ function fromBenefits(benefits: string[]) {
 
 export default function EmployerProfile() {
   const [profile, setProfile] = useState<EmployerProfileApi | null>(null);
-  const [openRoles, setOpenRoles] = useState<EmployerRequisitionApi[]>([]);
+  const [openRoles, setOpenRoles] = useState<JobListingApi[]>([]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<EmployerProfileApi | null>(null);
   const [benefitsText, setBenefitsText] = useState('');
@@ -29,14 +30,14 @@ export default function EmployerProfile() {
     setLoading(true);
     setError('');
     try {
-      const [profileRes, reqRes] = await Promise.all([
+      const [profileRes, jobsRes] = await Promise.all([
         getEmployerProfile(),
-        getEmployerRequisitions({ status: 'ACTIVE', limit: 10 }),
+        getEmployerJobListings(),
       ]);
       setProfile(profileRes.profile);
       setDraft(profileRes.profile);
       setBenefitsText(fromBenefits(profileRes.profile.benefits || []));
-      setOpenRoles(reqRes.requisitions);
+      setOpenRoles(jobsRes.listings?.filter((j) => j.status === 'ACTIVE' || j.status === 'PAUSED') || []);
     } catch (err: any) {
       setError(err.message || 'Failed to load company profile');
     } finally {
@@ -347,11 +348,11 @@ export default function EmployerProfile() {
                 </span>
               </div>
             </div>
-            <span className="empr-req-stage-chip has-count">{role.candidatesInPipeline} candidates</span>
+            <span className="empr-req-stage-chip has-count">{role.applicationCount || 0} applicants</span>
           </div>
         ))}
         {openRoles.length === 0 && (
-          <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>No active requisitions yet.</p>
+          <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>No active job listings yet.</p>
         )}
       </div>
 

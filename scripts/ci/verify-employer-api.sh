@@ -17,10 +17,6 @@ curl -sfS --max-time 15 \
   -H "$AUTH_HEADER" -H "$ALT_AUTH_HEADER" \
   "${API_URL%/}/api/employer/profile" >/tmp/employer_profile.json
 
-echo "Checking /api/employer/requisitions..."
-curl -sfS --max-time 15 \
-  -H "$AUTH_HEADER" -H "$ALT_AUTH_HEADER" \
-  "${API_URL%/}/api/employer/requisitions?status=ALL&limit=5" >/tmp/employer_requisitions.json
 
 echo "Checking /api/employer/candidates..."
 curl -sfS --max-time 15 \

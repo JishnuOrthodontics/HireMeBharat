@@ -25,7 +25,6 @@ export const API_PATHS = {
   },
   // Employer only
   EMPLOYER: {
-    REQUISITIONS: '/api/employer/requisitions',
     CANDIDATES: '/api/employer/candidates',
     MATCHES: '/api/employer/matches',
     PROFILE: '/api/employer/profile',

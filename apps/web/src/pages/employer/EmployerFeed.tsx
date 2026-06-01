@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   getEmployerActivity,
   getEmployerDashboardSummary,
@@ -6,15 +7,14 @@ import {
   type EmployerActivityApi,
   type EmployerMatchApi,
 } from '../../lib/employerApi';
-import CreateRequisitionModal from './CreateRequisitionModal';
 
 export default function EmployerFeed() {
+  const navigate = useNavigate();
   const [matches, setMatches] = useState<EmployerMatchApi[]>([]);
   const [activity, setActivity] = useState<EmployerActivityApi[]>([]);
   const [summary, setSummary] = useState<{ inPipeline: number; upcomingInterviews: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -50,8 +50,8 @@ export default function EmployerFeed() {
       <div className="dash-card">
         <div className="empr-post-job-card">
           <div className="dash-profile-avatar-placeholder" style={{ background: 'linear-gradient(135deg, var(--color-secondary), #f0d060)', color: '#1a1a2e', width: 40, height: 40, fontSize: 14 }}>TV</div>
-          <button className="empr-post-job-input" onClick={() => setCreateOpen(true)}>Post a new requisition...</button>
-          <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 16px' }} onClick={() => setCreateOpen(true)}>
+          <button className="empr-post-job-input" onClick={() => navigate('/employer/job-listings')}>Post a new job listing...</button>
+          <button className="btn btn-gold" style={{ fontSize: 13, padding: '8px 16px' }} onClick={() => navigate('/employer/job-listings')}>
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
             Post
           </button>
@@ -132,11 +132,6 @@ export default function EmployerFeed() {
           <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>No activity yet.</p>
         )}
       </div>
-      <CreateRequisitionModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={load}
-      />
     </>
   );
 }

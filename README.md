@@ -268,9 +268,6 @@ bash scripts/ci/verify-employee-api.sh
 
 Employer views now read/write real backend data through `api-employer` (role-scoped to `EMPLOYER`):
 
-- `GET /api/employer/requisitions?status=ALL|DRAFT|ACTIVE|PAUSED|FILLED|CLOSED`
-- `POST /api/employer/requisitions`
-- `PATCH /api/employer/requisitions/:id`
 - `GET /api/employer/candidates?stage=ALL|SOURCED|SCREENING|INTERVIEW|OFFER|HIRED|REJECTED`
 - `PATCH /api/employer/candidates/:id/stage`
 - `GET /api/employer/matches`
@@ -281,7 +278,6 @@ Employer views now read/write real backend data through `api-employer` (role-sco
 Backed MongoDB collections/indexes:
 
 - `employer_profiles` (`employerUid` unique)
-- `employer_requisitions` (`employerUid`, `status`, `updatedAt`)
 - `employer_candidates` (`employerUid`, `stage`, `updatedAt`) and (`employerUid`, `requisitionId`, `stage`)
 - `employer_matches` (`employerUid`, `score`)
 - `employer_interviews` (`employerUid`, `scheduledAt`)
@@ -290,7 +286,7 @@ Backed MongoDB collections/indexes:
 Notes for this phase:
 
 - Employer `Messages` and `Analytics` navigation routes are intentionally marked **Coming soon**.
-- Core hiring workflows (`Home`, `Requisitions`, `Candidates`, `Profile`) are production-backed.
+- Core hiring workflows (`Home`, `Candidates`, `Profile`) are production-backed.
 
 ### Employer API smoke test
 
@@ -325,7 +321,7 @@ layered on top of the existing concierge matching platform, this system adds a f
 - **Feedback:** `POST /api/jobs/feedback` allows employees to submit platform reviews.
 
 #### 3. Recruiter Workflows (`EMPLOYER` Role)
-- **Post & Moderate Listings:** `POST /api/jobs/listings` allows creating new job listings. Includes a highly premium **Promote Requisition** option to auto-populate job board fields from active concierge requisitions.
+- **Post & Moderate Listings:** `POST /api/jobs/listings` allows creating new job listings.
 - **Pipeline Review:** `GET /api/jobs/employer/applications` displays all direct applicants. Recruiters can review resumes and cover letters, then transition candidate status to Reviewed, Shortlisted, Interview, or Offered.
 - **Video Interviews:** Transitioning status to `INTERVIEW` automatically schedules a video interview, generates a meeting link, and adds it to both candidate and recruiter schedules.
 - **Dispatched Offers:** `POST /api/jobs/employer/offers` creates formal job offers with specific CTCs, start dates, and validity periods, and emails/notifies candidates.
