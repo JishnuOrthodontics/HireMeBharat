@@ -9,7 +9,12 @@ export async function registerMongoPlugin(app: FastifyInstance) {
   const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
   const dbName = process.env.MONGODB_DB || 'hiremebharat';
 
-  const client = new MongoClient(uri);
+  const client = new MongoClient(uri, {
+    maxPoolSize: parseInt(process.env.MONGODB_MAX_POOL_SIZE || '100', 10),
+    minPoolSize: parseInt(process.env.MONGODB_MIN_POOL_SIZE || '5', 10),
+    socketTimeoutMS: parseInt(process.env.MONGODB_SOCKET_TIMEOUT_MS || '30000', 10),
+    serverSelectionTimeoutMS: parseInt(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS || '5000', 10),
+  });
 
   try {
     await client.connect();
