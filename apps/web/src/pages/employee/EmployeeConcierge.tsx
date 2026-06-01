@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { getConciergeMessages, sendConciergeMessage, type ConciergeApi } from '../../lib/employeeApi';
+import { useEffect, useState, useRef } from 'react';
+import { getConciergeMessages, type ConciergeApi, type ConciergeMessageApi } from '../../lib/employeeApi';
+import { useWebSocket } from '../../contexts/WebSocketContext';
 
 export default function EmployeeConcierge() {
   const [newMessage, setNewMessage] = useState('');
@@ -7,6 +8,15 @@ export default function EmployeeConcierge() {
   const [error, setError] = useState('');
   const [sending, setSending] = useState(false);
 
+  const ws = useWebSocket();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [data?.messages]);
+
+  // Load initial messages via REST
   const load = async () => {
     setError('');
     try {
@@ -21,19 +31,62 @@ export default function EmployeeConcierge() {
     load();
   }, []);
 
+  // Subscribe to live concierge messages via WebSocket
+  useEffect(() => {
+    const unsub = ws.subscribe('concierge_message', (payload: any) => {
+      const msg = payload.message as ConciergeMessageApi;
+      if (!msg) return;
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              messages: [
+                ...prev.messages,
+                {
+                  id: msg.id,
+                  from: msg.from,
+                  content: msg.content,
+                  timestamp: msg.timestamp,
+                },
+              ],
+            }
+          : prev
+      );
+    });
+    return unsub;
+  }, [ws]);
+
+  // Send via WebSocket if connected, fall back to REST
   const onSend = async () => {
     const content = newMessage.trim();
     if (!content) return;
     setSending(true);
     setError('');
-    try {
-      const res = await sendConciergeMessage(content);
-      setData((prev) => prev ? { ...prev, messages: [...prev.messages, res.message] } : prev);
+
+    if (ws.connected) {
+      // Send via WebSocket — the backend will echo back the message + bot reply
+      ws.sendConciergeMessage(content);
       setNewMessage('');
-    } catch (err: any) {
-      setError(err.message || 'Unable to send message');
-    } finally {
       setSending(false);
+    } else {
+      // Fallback to REST
+      try {
+        const { sendConciergeMessage: sendRest } = await import('../../lib/employeeApi');
+        const res = await sendRest(content);
+        setData((prev) => prev ? { ...prev, messages: [...prev.messages, res.message] } : prev);
+        setNewMessage('');
+      } catch (err: any) {
+        setError(err.message || 'Unable to send message');
+      } finally {
+        setSending(false);
+      }
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      onSend();
     }
   };
 
@@ -45,7 +98,10 @@ export default function EmployeeConcierge() {
         <div style={{ flex: 1 }}>
           <p style={{ fontWeight: 600, fontSize: 15 }}>{data?.concierge?.name || 'Talent Concierge'}</p>
           <p className="emp-concierge-status">
-            <span className="emp-online-dot" /> {data?.concierge?.online ? 'Online now' : 'Offline'} · {data?.concierge?.title || 'Concierge'}
+            <span className="emp-online-dot" style={{
+              backgroundColor: ws.connected ? 'var(--color-success, #50fa7b)' : (data?.concierge?.online ? 'var(--color-success)' : 'var(--color-on-surface-variant)')
+            }} />
+            {' '}{ws.connected ? 'Live connected' : (data?.concierge?.online ? 'Online now' : 'Offline')} · {data?.concierge?.title || 'Concierge'}
           </p>
         </div>
         <button className="btn btn-ghost" style={{ fontSize: 13, padding: '6px 12px' }}>
@@ -61,7 +117,7 @@ export default function EmployeeConcierge() {
         {error && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
         {!data && !error && <p style={{ color: 'var(--color-on-surface-variant)' }}>Loading conversation...</p>}
         {data?.messages.map((msg, i) => (
-          <div key={i}>
+          <div key={msg.id || i}>
             <div className={`emp-chat-msg ${msg.from === 'user' ? 'sent' : 'received'}`}>
               {msg.content}
             </div>
@@ -70,6 +126,7 @@ export default function EmployeeConcierge() {
             </p>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Chat Input */}
@@ -82,6 +139,7 @@ export default function EmployeeConcierge() {
           placeholder="Type a message..."
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
+          onKeyDown={handleKeyPress}
         />
         <button className="emp-chat-send-btn" onClick={onSend} disabled={sending || !newMessage.trim()}>
           <span className="material-symbols-outlined">send</span>
@@ -90,4 +148,3 @@ export default function EmployeeConcierge() {
     </div>
   );
 }
-

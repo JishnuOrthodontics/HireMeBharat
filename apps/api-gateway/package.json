@@ -11,6 +11,8 @@
   "dependencies": {
     "@fastify/cors": "^11.0.1",
     "@fastify/jwt": "^9.1.0",
+    "@fastify/websocket": "^11.0.1",
+
     "@hiremebharat/backend-core": "*",
     "@hiremebharat/shared": "*",
     "dotenv": "^16.5.0",

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
+import { WebSocketProvider } from './contexts/WebSocketContext';
 import PublicLayout from './layouts/PublicLayout';
 import AuthGuard from './components/guards/AuthGuard';
 import RoleGuard from './components/guards/RoleGuard';
@@ -58,6 +59,7 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <ErrorBoundary>
+            <WebSocketProvider>
             <Suspense fallback={<LoadingScreen />}>
               <Routes>
                 {/* Public Routes */}
@@ -111,6 +113,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
+            </WebSocketProvider>
           </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>

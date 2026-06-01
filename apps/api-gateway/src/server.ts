@@ -2,12 +2,15 @@ import Fastify, { FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import { config } from 'dotenv';
 import httpProxy from '@fastify/http-proxy';
+import fastifyWebsocket from '@fastify/websocket';
+import admin from 'firebase-admin';
 import {
   registerMongoPlugin,
   registerAuthPlugin,
   registerRbacPlugin,
   getBearerAuthorizationHeader,
 } from '@hiremebharat/backend-core';
+
 
 config();
 
@@ -55,6 +58,268 @@ async function buildApp() {
   // can always access app.authenticate/app.requireRole at runtime.
   await registerAuthPlugin(app);
   await registerRbacPlugin(app);
+
+  // --- WebSocket Plugin Registration ---
+  await app.register(fastifyWebsocket, {
+    options: { maxPayload: 1048576 } // 1MB payload limit
+  });
+
+  // Active websocket connections map: userId -> Socket[]
+  const activeClients = new Map<string, any[]>();
+
+  // --- MongoDB Change Stream for Live Notifications ---
+  app.ready(async () => {
+    const db = app.mongo?.db;
+    if (!db) return;
+
+    try {
+      const changeStream = db.collection('notifications').watch([
+        { $match: { operationType: 'insert' } }
+      ]);
+
+      changeStream.on('change', (change: any) => {
+        if (change.operationType === 'insert') {
+          const doc = change.fullDocument;
+          const userUid = doc?.userUid;
+          if (userUid) {
+            const payload = {
+              type: 'notification',
+              notification: {
+                id: String(doc._id),
+                type: doc.type,
+                title: doc.title,
+                content: doc.content,
+                read: Boolean(doc.read),
+                createdAt: doc.createdAt instanceof Date ? doc.createdAt.toISOString() : new Date().toISOString(),
+              }
+            };
+            
+            // Broadcast live to all the target user's active sockets
+            activeClients.get(userUid)?.forEach(sock => {
+              if (sock.readyState === 1) { // OPEN
+                sock.send(JSON.stringify(payload));
+              }
+            });
+          }
+        }
+      });
+
+      app.log.info('🔔 Live Notifications MongoDB Change Stream observer successfully initialized');
+    } catch (err) {
+      app.log.warn('⚠️ Replica Change Stream not enabled or blocked locally. Live notifications fallback active.');
+    }
+  });
+
+  // --- WebSocket Connection Upgrade Handler ---
+  app.route({
+    method: 'GET',
+    url: '/api/ws',
+    handler: async (request, reply) => {
+      return reply.code(400).send({ error: 'Bad Request', message: 'WebSocket connection expected' });
+    },
+    wsHandler: async (connection, req) => {
+      const token = (req.query as any)?.token;
+      if (!token) {
+        connection.socket.close(1008, 'Token is required');
+        return;
+      }
+
+      let uid = '';
+      let role = 'EMPLOYEE';
+      let displayName = 'User';
+
+      try {
+        if (process.env.NODE_ENV === 'development' && token.startsWith('dev_')) {
+          const parts = token.split('_');
+          uid = parts[1] || 'dev-user';
+          role = (parts[2] || 'EMPLOYEE').toUpperCase();
+          displayName = 'Dev User';
+        } else {
+          const decoded = await admin.auth().verifyIdToken(token);
+          uid = decoded.uid;
+          
+          const db = app.mongo?.db;
+          const userDoc = db ? await db.collection('users').findOne({ $or: [{ uid }, { firebaseUid: uid }] }) : null;
+          role = userDoc?.role || 'EMPLOYEE';
+          displayName = userDoc?.displayName || 'User';
+        }
+      } catch (err) {
+        connection.socket.close(1008, 'Authentication failed');
+        return;
+      }
+
+      if (!activeClients.has(uid)) {
+        activeClients.set(uid, []);
+      }
+      activeClients.get(uid)!.push(connection.socket);
+      app.log.info(`WebSocket connected for user ${uid} (${role})`);
+
+      connection.socket.on('close', () => {
+        const list = activeClients.get(uid) || [];
+        const index = list.indexOf(connection.socket);
+        if (index !== -1) {
+          list.splice(index, 1);
+        }
+        if (list.length === 0) {
+          activeClients.delete(uid);
+        }
+        app.log.info(`WebSocket disconnected for user ${uid}`);
+      });
+
+      connection.socket.on('message', async (messageBuffer: any) => {
+        try {
+          const data = JSON.parse(messageBuffer.toString());
+          const db = app.mongo?.db;
+          if (!db) return;
+
+          if (data.type === 'concierge_message') {
+            const content = data.content;
+            if (!content || !content.trim()) return;
+
+            const conversations = db.collection('employee_conversations');
+            const messagesCol = db.collection('employee_messages');
+            const now = new Date();
+
+            let convo = await conversations.findOne({ employeeUid: uid });
+            if (!convo) {
+              const insert = await conversations.insertOne({
+                employeeUid: uid,
+                conciergeName: 'Sarah Jenkins',
+                conciergeTitle: 'Senior Talent Concierge',
+                conciergeInitials: 'SJ',
+                conciergeOnline: true,
+                createdAt: now,
+                updatedAt: now,
+              });
+              convo = await conversations.findOne({ _id: insert.insertedId });
+            }
+
+            const insertedUserMsg = await messagesCol.insertOne({
+              conversationId: String(convo!._id),
+              senderUid: uid,
+              content: content,
+              timestamp: now,
+            });
+
+            await conversations.updateOne({ _id: convo!._id }, { $set: { updatedAt: now, lastMessage: content } });
+
+            const userMsgPayload = {
+              type: 'concierge_message',
+              message: {
+                id: String(insertedUserMsg.insertedId),
+                from: 'user',
+                content: content,
+                timestamp: now.toISOString(),
+              }
+            };
+
+            activeClients.get(uid)?.forEach(sock => {
+              if (sock.readyState === 1) {
+                sock.send(JSON.stringify(userMsgPayload));
+              }
+            });
+
+            setTimeout(async () => {
+              const botResponses = [
+                `Hi there! Thanks for reaching out. I'm currently reviewing your profile and matches to ensure you're positioned perfectly for top roles.`,
+                `Hello! EliteRecruit's premium platform matches professionals with elite teams. Let's schedule an intro call soon!`,
+                `Got it! I am indexing fresh positions fitting your skills and desired CTC bounds. I will share highlights directly.`
+              ];
+              const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
+              const botNow = new Date();
+
+              const insertedBotMsg = await messagesCol.insertOne({
+                conversationId: String(convo!._id),
+                senderUid: 'concierge-uid',
+                content: randomResponse,
+                timestamp: botNow,
+              });
+
+              await conversations.updateOne({ _id: convo!._id }, { $set: { updatedAt: botNow, lastMessage: randomResponse } });
+
+              const botMsgPayload = {
+                type: 'concierge_message',
+                message: {
+                  id: String(insertedBotMsg.insertedId),
+                  from: 'concierge',
+                  content: randomResponse,
+                  timestamp: botNow.toISOString(),
+                }
+              };
+
+              activeClients.get(uid)?.forEach(sock => {
+                if (sock.readyState === 1) {
+                  sock.send(JSON.stringify(botMsgPayload));
+                }
+              });
+            }, 1500);
+          }
+
+          if (data.type === 'chat_message') {
+            const { recipientUid, content } = data;
+            if (!recipientUid || !content || !content.trim()) return;
+
+            const chatMessages = db.collection('direct_messages');
+            const now = new Date();
+
+            const inserted = await chatMessages.insertOne({
+              senderUid: uid,
+              recipientUid,
+              content,
+              timestamp: now,
+            });
+
+            const chatMsgPayload = {
+              type: 'chat_message',
+              message: {
+                id: String(inserted.insertedId),
+                senderUid: uid,
+                recipientUid,
+                content,
+                timestamp: now.toISOString(),
+              }
+            };
+
+            activeClients.get(uid)?.forEach(sock => {
+              if (sock.readyState === 1) sock.send(JSON.stringify(chatMsgPayload));
+            });
+
+            activeClients.get(recipientUid)?.forEach(sock => {
+              if (sock.readyState === 1) sock.send(JSON.stringify(chatMsgPayload));
+            });
+          }
+
+          if (data.type === 'chat_history') {
+            const { partnerUid } = data;
+            if (!partnerUid) return;
+
+            const chatMessages = db.collection('direct_messages');
+            const history = await chatMessages.find({
+              $or: [
+                { senderUid: uid, recipientUid: partnerUid },
+                { senderUid: partnerUid, recipientUid: uid }
+              ]
+            }).sort({ timestamp: 1 }).limit(100).toArray();
+
+            connection.socket.send(JSON.stringify({
+              type: 'chat_history',
+              partnerUid,
+              messages: history.map(h => ({
+                id: String(h._id),
+                senderUid: h.senderUid,
+                recipientUid: h.recipientUid,
+                content: h.content,
+                timestamp: h.timestamp.toISOString(),
+              }))
+            }));
+          }
+        } catch (err) {
+          app.log.error(err, 'Failed to process incoming socket message');
+        }
+      });
+    }
+  });
+
 
   // --- HTTP Proxy to microservices ---
   // Public routes (no auth required) -> api-auth

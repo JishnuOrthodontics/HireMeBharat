@@ -8,6 +8,7 @@ import EmployerJobListings from './EmployerJobListings';
 import EmployerApplicationReview from './EmployerApplicationReview';
 import EmployerOfferManagement from './EmployerOfferManagement';
 import EmployerFeedback from './EmployerFeedback';
+import EmployerMessages from './EmployerMessages';
 import {
   getEmployerDashboardSummary,
   getEmployerProfile,
@@ -250,7 +251,7 @@ export default function Dashboard() {
         <Route path="applications" element={<EmployerApplicationReview />} />
         <Route path="offers" element={<EmployerOfferManagement />} />
         <Route path="feedback" element={<EmployerFeedback />} />
-        <Route path="messages" element={<ComingSoon title="Messages" />} />
+        <Route path="messages" element={<EmployerMessages />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
         <Route path="profile" element={<EmployerProfile />} />
         <Route path="settings" element={<Navigate to="/employer/profile" replace />} />
