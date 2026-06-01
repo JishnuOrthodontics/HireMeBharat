@@ -7,6 +7,7 @@ import RoleGuard from './components/guards/RoleGuard';
 import PublicOnlyGuard from './components/guards/PublicOnlyGuard';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Lazy-loaded pages
 const LandingPage = lazy(() => import('./pages/landing/LandingPage'));
@@ -56,59 +57,61 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <Suspense fallback={<LoadingScreen />}>
-            <Routes>
-              {/* Public Routes */}
-              <Route element={<PublicLayout />}>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/signin" element={
-                  <PublicOnlyGuard><SignIn /></PublicOnlyGuard>
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingScreen />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route element={<PublicLayout />}>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/signin" element={
+                    <PublicOnlyGuard><SignIn /></PublicOnlyGuard>
+                  } />
+                  <Route path="/register" element={
+                    <PublicOnlyGuard><Register /></PublicOnlyGuard>
+                  } />
+                  <Route path="/jobs" element={<JobSearch />} />
+                  <Route path="/jobs/:id" element={<JobDetails />} />
+                </Route>
+
+                {/* Role Selection (Google first-time users) */}
+                <Route path="/role-select" element={<RoleSelect />} />
+
+                {/* Protected Dashboard Routes */}
+                <Route path="/admin/*" element={
+                  <AuthGuard>
+                    <RoleGuard allowedRoles={['ADMIN']}>
+                      <AdminDashboard />
+                    </RoleGuard>
+                  </AuthGuard>
                 } />
-                <Route path="/register" element={
-                  <PublicOnlyGuard><Register /></PublicOnlyGuard>
+                <Route path="/employee/*" element={
+                  <AuthGuard>
+                    <RoleGuard allowedRoles={['EMPLOYEE']}>
+                      <EmployeeDashboard />
+                    </RoleGuard>
+                  </AuthGuard>
                 } />
-                <Route path="/jobs" element={<JobSearch />} />
-                <Route path="/jobs/:id" element={<JobDetails />} />
-              </Route>
+                {/* Must not use /employee/:uid — it steals /employee/profile, /employee/matches, etc. */}
+                <Route path="/employee/view/:uid" element={
+                  <AuthGuard>
+                    <RoleGuard allowedRoles={['EMPLOYER', 'ADMIN']}>
+                      <EmployeePublicProfile />
+                    </RoleGuard>
+                  </AuthGuard>
+                } />
+                <Route path="/employer/*" element={
+                  <AuthGuard>
+                    <RoleGuard allowedRoles={['EMPLOYER']}>
+                      <EmployerDashboard />
+                    </RoleGuard>
+                  </AuthGuard>
+                } />
 
-              {/* Role Selection (Google first-time users) */}
-              <Route path="/role-select" element={<RoleSelect />} />
-
-              {/* Protected Dashboard Routes */}
-              <Route path="/admin/*" element={
-                <AuthGuard>
-                  <RoleGuard allowedRoles={['ADMIN']}>
-                    <AdminDashboard />
-                  </RoleGuard>
-                </AuthGuard>
-              } />
-              <Route path="/employee/*" element={
-                <AuthGuard>
-                  <RoleGuard allowedRoles={['EMPLOYEE']}>
-                    <EmployeeDashboard />
-                  </RoleGuard>
-                </AuthGuard>
-              } />
-              {/* Must not use /employee/:uid — it steals /employee/profile, /employee/matches, etc. */}
-              <Route path="/employee/view/:uid" element={
-                <AuthGuard>
-                  <RoleGuard allowedRoles={['EMPLOYER', 'ADMIN']}>
-                    <EmployeePublicProfile />
-                  </RoleGuard>
-                </AuthGuard>
-              } />
-              <Route path="/employer/*" element={
-                <AuthGuard>
-                  <RoleGuard allowedRoles={['EMPLOYER']}>
-                    <EmployerDashboard />
-                  </RoleGuard>
-                </AuthGuard>
-              } />
-
-              {/* Catch-all */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
