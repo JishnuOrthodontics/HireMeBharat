@@ -3,7 +3,7 @@ import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
-import '@hiremebharat/backend-core';
+import { calculateMatchScore } from '@hiremebharat/backend-core';
 
 const profileUpdateSchema = z.object({
   displayName: z.string().min(1).max(120).optional(),
@@ -387,58 +387,78 @@ export async function employeeRoutes(app: FastifyInstance) {
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
 
     const matches = db.collection('employee_matches');
-    const filter: Record<string, unknown> = { employeeUid: uid };
-    const existingAny = await matches.countDocuments({ employeeUid: uid }, { limit: 1 });
-    if (!existingAny) {
+    
+    // 1. Fetch Candidate Profile
+    const profileDoc = await db.collection('candidate_profiles').findOne({ userId: uid });
+    
+    if (profileDoc) {
+      // 2. Fetch all Active Job Listings
+      const activeJobs = await db.collection('job_listings').find({ status: 'ACTIVE' }).toArray();
+      
+      // 3. Fetch all current matches for this employee to preserve status (NEW/SAVED/INTERESTED/DECLINED/APPLIED)
+      const existingMatches = await matches.find({ employeeUid: uid }).toArray();
+      const existingMap = new Map(existingMatches.map(m => [String(m.jobId || m.requisitionId), m]));
+      
       const now = new Date();
-      await matches.insertMany([
-        {
-          employeeUid: uid,
-          requisitionId: `seed-${uid}-1`,
-          title: 'VP of Product Engineering',
-          company: 'Stealth AI Startup',
-          location: 'San Francisco · Hybrid',
-          salaryRange: '$240k - $300k + Equity',
-          tags: ['AI/ML', 'Scale-ups', 'Platform'],
-          score: 94,
-          status: 'NEW',
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          employeeUid: uid,
-          requisitionId: `seed-${uid}-2`,
-          title: 'Head of AI Infrastructure',
-          company: 'NextGen Robotics',
-          location: 'New York · Remote',
-          salaryRange: '$220k - $280k',
-          tags: ['ML Ops', 'Distributed Systems', 'Leadership'],
-          score: 91,
-          status: 'NEW',
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          employeeUid: uid,
-          requisitionId: `seed-${uid}-3`,
-          title: 'Director of Engineering',
-          company: 'Enterprise SaaS',
-          location: 'Seattle · Hybrid',
-          salaryRange: '$210k - $260k',
-          tags: ['SaaS', 'Kubernetes'],
-          score: 85,
-          status: 'SAVED',
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
+      const activeJobIds = new Set<string>();
+
+      for (const job of activeJobs) {
+        const jobIdStr = String(job._id);
+        activeJobIds.add(jobIdStr);
+        
+        // Calculate match score
+        const { score, breakdown } = calculateMatchScore(profileDoc as any, job as any);
+        
+        // Keep match if score is reasonable (e.g. >= 50)
+        if (score >= 50) {
+          const existing = existingMap.get(jobIdStr);
+          const currentStatus = existing?.status || 'NEW';
+          
+          const matchDoc = {
+            employeeUid: uid,
+            requisitionId: jobIdStr, // Keep requisitionId for backwards compatibility
+            jobId: jobIdStr,
+            title: job.title,
+            company: job.company || 'Unknown Company',
+            location: job.location,
+            salaryRange: (job.salaryMin || job.salaryMax) ? 
+              (job.salaryCurrency === 'INR' 
+                ? `₹${Math.round(job.salaryMin / 100000)}L – ₹${Math.round(job.salaryMax / 100000)}L`
+                : `$${Math.round(job.salaryMin / 1000)}k – $${Math.round(job.salaryMax / 1000)}k`) 
+              : 'Compensation TBD',
+            tags: Array.isArray(job.skills) ? job.skills.slice(0, 3) : [],
+            score,
+            status: currentStatus,
+            updatedAt: now,
+            breakdown,
+          };
+          
+          // Upsert into DB
+          await matches.updateOne(
+            { employeeUid: uid, jobId: jobIdStr },
+            { 
+              $set: matchDoc,
+              $setOnInsert: { createdAt: now }
+            },
+            { upsert: true }
+          );
+        }
+      }
+      
+      // 4. Clean up matches for jobs that are no longer active/present
+      await matches.deleteMany({
+        employeeUid: uid,
+        jobId: { $nin: Array.from(activeJobIds) }
+      });
     }
+
+    const filter: Record<string, unknown> = { employeeUid: uid };
     if (status && status !== 'ALL') filter.status = status;
 
-    const [profileDoc, allDocs] = await Promise.all([
-      db.collection('candidate_profiles').findOne({ userId: uid }),
-      matches.find(filter).sort({ updatedAt: -1 }).toArray(),
+    const [allDocs] = await Promise.all([
+      matches.find(filter).sort({ score: -1, updatedAt: -1 }).toArray(),
     ]);
+
     const expectedCtc = Number(profileDoc?.expectedCtc || 0);
     const mismatchThreshold = expectedCtc > 0 ? expectedCtc * 0.8 : 0;
 

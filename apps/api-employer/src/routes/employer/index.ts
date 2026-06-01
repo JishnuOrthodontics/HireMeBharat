@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
-import '@hiremebharat/backend-core';
+import { calculateMatchScore } from '@hiremebharat/backend-core';
 
 const candidateStageSchema = z.enum(['SOURCED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']);
 
@@ -64,6 +64,93 @@ export async function employerRoutes(app: FastifyInstance) {
     ]);
   });
 
+  async function recalculateEmployerCandidates(db: any, employerUid: string) {
+    // 1. Fetch all active job listings owned by this employer
+    const activeJobs = await db.collection('job_listings').find({ employerUid, status: 'ACTIVE' }).toArray();
+    if (activeJobs.length === 0) return;
+
+    // 2. Fetch all candidate profiles
+    const candidates = await db.collection('candidate_profiles').find({}).toArray();
+    if (candidates.length === 0) return;
+
+    // 3. Fetch all user accounts to resolve actual display names
+    const candidateUserIds = candidates.map((c: any) => c.userId);
+    const users = await db.collection('users').find({ uid: { $in: candidateUserIds } }).toArray();
+    const userMap = new Map<string, any>(users.map((u: any) => [String(u.uid), u] as [string, any]));
+
+    // 4. Fetch existing candidates to preserve active pipeline stages (SOURCED/INTERVIEW/etc.)
+    const existingCandidates = await db.collection('employer_candidates').find({ employerUid }).toArray();
+    const existingMap = new Map<string, any>(
+      existingCandidates.map((ec: any) => [`${String(ec.requisitionId)}-${ec.employeeUid}`, ec] as [string, any])
+    );
+
+
+    const now = new Date();
+    const activeRequisitionIds = new Set<string>();
+
+    for (const job of activeJobs) {
+      const jobIdStr = String(job._id);
+      activeRequisitionIds.add(jobIdStr);
+
+      for (const cand of candidates) {
+        // Calculate match score using shared mathematical engine
+        const { score, breakdown } = calculateMatchScore(cand as any, job as any);
+
+        // Keep candidates with a match score of 50% or higher
+        if (score >= 50) {
+          const key = `${jobIdStr}-${cand.userId}`;
+          const existing = existingMap.get(key);
+          const currentStage = existing?.stage || 'SOURCED';
+
+          const userDoc = userMap.get(cand.userId);
+          const fullName = userDoc?.displayName || cand.displayName || 'Candidate';
+          const initials = fullName
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((n: string) => n.charAt(0))
+            .join('')
+            .toUpperCase() || 'NA';
+
+          const candidateDoc = {
+            employerUid,
+            requisitionId: jobIdStr,
+            jobId: jobIdStr,
+            employeeUid: cand.userId,
+            name: fullName,
+            initials,
+            title: cand.headline || 'Software Engineer',
+            score,
+            skills: Array.isArray(cand.skills) ? cand.skills.slice(0, 5) : [],
+            compensation: cand.expectedCtc ? 
+              (cand.expectedCurrency === 'INR' 
+                ? `₹${Math.round(cand.expectedCtc / 100000)}L`
+                : `$${Math.round(cand.expectedCtc / 1000)}k`)
+              : 'Compensation TBD',
+            roleTarget: cand.headline || 'Product Specialist',
+            stage: currentStage,
+            updatedAt: now,
+            breakdown,
+          };
+
+          await db.collection('employer_candidates').updateOne(
+            { employerUid, requisitionId: jobIdStr, employeeUid: cand.userId },
+            {
+              $set: candidateDoc,
+              $setOnInsert: { createdAt: now }
+            },
+            { upsert: true }
+          );
+        }
+      }
+    }
+
+    // 5. Clean up candidate associations for listings that are no longer active
+    await db.collection('employer_candidates').deleteMany({
+      employerUid,
+      requisitionId: { $nin: Array.from(activeRequisitionIds) }
+    });
+  }
+
   // GET /api/employer/candidates
   app.get('/candidates', async (request, reply) => {
     const parsed = candidatesQuerySchema.safeParse(request.query ?? {});
@@ -73,11 +160,17 @@ export async function employerRoutes(app: FastifyInstance) {
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
     const { stage, requisitionId, limit, offset } = parsed.data;
 
+    try {
+      await recalculateEmployerCandidates(db, uid);
+    } catch (err) {
+      app.log.error(err, 'Failed to recalculate matching candidates');
+    }
+
     const filter: Record<string, unknown> = { employerUid: uid };
     if (stage && stage !== 'ALL') filter.stage = stage;
     if (requisitionId) filter.requisitionId = requisitionId;
 
-    const docs = await db.collection('employer_candidates').find(filter).sort({ updatedAt: -1 }).skip(offset).limit(limit).toArray();
+    const docs = await db.collection('employer_candidates').find(filter).sort({ score: -1, updatedAt: -1 }).skip(offset).limit(limit).toArray();
     const total = await db.collection('employer_candidates').countDocuments(filter);
     return reply.send({
       candidates: docs.map((doc) => ({
@@ -101,6 +194,7 @@ export async function employerRoutes(app: FastifyInstance) {
       offset,
     });
   });
+
 
   // PATCH /api/employer/candidates/:id/stage
   app.patch('/candidates/:id/stage', async (request, reply) => {
@@ -131,6 +225,13 @@ export async function employerRoutes(app: FastifyInstance) {
     const uid = request.user!.uid;
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    try {
+      await recalculateEmployerCandidates(db, uid);
+    } catch (err) {
+      app.log.error(err, 'Failed to recalculate matching candidates in matches');
+    }
+
     const docs = await db.collection('employer_candidates')
       .find({ employerUid: uid })
       .sort({ score: -1, updatedAt: -1 })
@@ -151,6 +252,7 @@ export async function employerRoutes(app: FastifyInstance) {
       })),
     });
   });
+
 
   // GET /api/employer/dashboard-summary
   // Uses job_listings (single source of truth) for open roles count
