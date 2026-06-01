@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
+import fs from 'fs';
+import path from 'path';
 import '@hiremebharat/backend-core';
 
 const profileUpdateSchema = z.object({
@@ -636,6 +638,44 @@ export async function employeeRoutes(app: FastifyInstance) {
         interviews,
         unreadNotifications,
       },
+    });
+  });
+
+  // POST /api/employee/resume/upload
+  app.post('/resume/upload', async (request, reply) => {
+    const data = await request.file();
+    if (!data) {
+      return reply.code(400).send({ error: 'Bad Request', message: 'No file uploaded' });
+    }
+    const allowedExtensions = ['.pdf', '.doc', '.docx'];
+    const ext = path.extname(data.filename).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      return reply.code(400).send({ error: 'Bad Request', message: 'Only PDF or Word documents are allowed' });
+    }
+
+    const uid = request.user!.uid;
+    const safeName = data.filename.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120);
+    const fileName = `${Date.now()}_${safeName}`;
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    const filePath = path.join(uploadsDir, fileName);
+
+    await fs.promises.mkdir(uploadsDir, { recursive: true });
+    
+    // Save file
+    const writeStream = fs.createWriteStream(filePath);
+    await new Promise<void>((resolve, reject) => {
+      data.file.pipe(writeStream);
+      data.file.on('end', resolve);
+      data.file.on('error', reject);
+    });
+
+    const gatewayUrl = process.env.API_GATEWAY_URL || 'http://localhost:3001';
+    const resumeUrl = `${gatewayUrl}/api/employee/public/uploads/${fileName}`;
+
+    return reply.send({
+      ok: true,
+      url: resumeUrl,
+      fileName: data.filename,
     });
   });
 }

@@ -192,3 +192,12 @@ export async function getEmployeePublicProfile(uid: string) {
   return request<{ profile: EmployeePublicProfileApi }>(`/api/employee/public/${encodeURIComponent(uid)}`);
 }
 
+export async function uploadResumeToBackend(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return request<{ ok: boolean; url: string; fileName: string }>('/api/employee/resume/upload', {
+    method: 'POST',
+    body: formData,
+  });
+}
+

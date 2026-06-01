@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getEmployeeProfile, patchEmployeeProfile, type EmployeeProfileApi } from '../../lib/employeeApi';
+import { getEmployeeProfile, patchEmployeeProfile, uploadResumeToBackend, type EmployeeProfileApi } from '../../lib/employeeApi';
 import { uploadEmployeeResumeFile } from '../../lib/resumeStorage';
 import './Employee.css';
 
@@ -107,16 +107,26 @@ export default function EmployeeResume() {
     setBusy(true);
     setError('');
     try {
-      const { url } = await uploadEmployeeResumeFile(file);
-      await patchEmployeeProfile({
-        resumeUrl: url,
-        resumeFileName: file.name,
-      });
-      await load();
+      try {
+        const { url } = await uploadResumeToBackend(file);
+        await patchEmployeeProfile({
+          resumeUrl: url,
+          resumeFileName: file.name,
+        });
+        await load();
+      } catch (backendErr) {
+        console.warn('Backend upload failed, trying Firebase Storage fallback...', backendErr);
+        const { url } = await uploadEmployeeResumeFile(file);
+        await patchEmployeeProfile({
+          resumeUrl: url,
+          resumeFileName: file.name,
+        });
+        await load();
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Upload failed';
       setError(
-        `${msg} If uploads are blocked, paste a public HTTPS link to your resume below (Google Drive, Dropbox, etc.), or ask your admin to enable Firebase Storage rules for path employee-resumes/{uid}/.`
+        `${msg} If uploads are blocked, paste a public HTTPS link to your resume below (Google Drive, Dropbox, etc.), or contact support.`
       );
     } finally {
       setBusy(false);
