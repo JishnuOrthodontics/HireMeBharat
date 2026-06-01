@@ -47,7 +47,7 @@ export default function EmployerMessages() {
               displayName: 'Michael Rodriguez',
               initials: 'MR',
               headline: 'Enterprise Account Director',
-              lastMessage: 'Welcome to EliteRecruit! How can I help you today?',
+              lastMessage: 'Welcome to HireMeBharat! How can I help you today?',
               lastMessageAt: new Date().toISOString(),
             },
           ]);

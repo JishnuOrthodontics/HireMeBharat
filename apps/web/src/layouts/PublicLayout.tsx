@@ -25,7 +25,7 @@ export default function PublicLayout() {
         <div className="container header-inner">
           <Link to="/" className="logo">
             <span className="material-symbols-outlined logo-icon">diamond</span>
-            <span className="logo-text">ELITERECRUIT</span>
+            <span className="logo-text">HIREMEBHARAT</span>
           </Link>
 
           <nav className="header-nav desktop-only">
@@ -70,7 +70,7 @@ export default function PublicLayout() {
           <div className="footer-brand">
             <div className="footer-logo">
               <span className="material-symbols-outlined logo-icon">diamond</span>
-              <span className="logo-text">ELITERECRUIT</span>
+              <span className="logo-text">HIREMEBHARAT</span>
             </div>
             <p className="footer-tagline">Premium concierge recruitment for visionary leaders.</p>
           </div>

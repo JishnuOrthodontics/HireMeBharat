@@ -222,7 +222,7 @@ async function buildApp() {
             setTimeout(async () => {
               const botResponses = [
                 `Hi there! Thanks for reaching out. I'm currently reviewing your profile and matches to ensure you're positioned perfectly for top roles.`,
-                `Hello! EliteRecruit's premium platform matches professionals with elite teams. Let's schedule an intro call soon!`,
+                `Hello! HireMeBharat's premium platform matches professionals with elite teams. Let's schedule an intro call soon!`,
                 `Got it! I am indexing fresh positions fitting your skills and desired CTC bounds. I will share highlights directly.`
               ];
               const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
