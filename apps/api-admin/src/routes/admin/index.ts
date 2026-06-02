@@ -33,6 +33,8 @@ const notificationsQuerySchema = z.object({
 const patchUserSchema = z
   .object({
     status: userStatusSchema.optional(),
+    plan: z.enum(['FREE', 'PRO', 'PREMIUM']).optional(),
+    credits: z.coerce.number().int().min(0).optional(),
   })
   .refine((payload) => Object.keys(payload).length > 0, {
     message: 'At least one field must be provided',
@@ -246,6 +248,8 @@ export async function adminRoutes(app: FastifyInstance) {
         displayName: doc.displayName || '',
         role: doc.role || 'EMPLOYEE',
         status: doc.status || 'ACTIVE',
+        plan: doc.plan || 'FREE',
+        credits: doc.credits || 0,
         createdAt: toIso(doc.createdAt),
         updatedAt: toIso(doc.updatedAt),
       })),
@@ -280,8 +284,18 @@ export async function adminRoutes(app: FastifyInstance) {
       action: 'admin.user.patch',
       targetType: 'user',
       targetId: String(before._id),
-      before: { role: before.role || 'EMPLOYEE', status: before.status || 'ACTIVE' },
-      after: { role: before.role || 'EMPLOYEE', status: parsed.data.status || before.status || 'ACTIVE' },
+      before: {
+        role: before.role || 'EMPLOYEE',
+        status: before.status || 'ACTIVE',
+        plan: before.plan || 'FREE',
+        credits: before.credits || 0,
+      },
+      after: {
+        role: before.role || 'EMPLOYEE',
+        status: parsed.data.status || before.status || 'ACTIVE',
+        plan: parsed.data.plan || before.plan || 'FREE',
+        credits: parsed.data.credits !== undefined ? parsed.data.credits : (before.credits || 0),
+      },
     });
 
     return reply.send({ ok: true });

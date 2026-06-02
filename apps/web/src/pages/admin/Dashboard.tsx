@@ -257,6 +257,8 @@ function UsersPage() {
   const [error, setError] = useState('');
   const [savingId, setSavingId] = useState('');
   const [draftStatus, setDraftStatus] = useState<Record<string, AdminUserStatus>>({});
+  const [draftPlan, setDraftPlan] = useState<Record<string, 'FREE' | 'PRO' | 'PREMIUM'>>({});
+  const [draftCredits, setDraftCredits] = useState<Record<string, number>>({});
 
   const load = async () => {
     setLoading(true);
@@ -266,10 +268,16 @@ function UsersPage() {
       setRows(res.users);
       setTotal(res.total);
       const statusMap: Record<string, AdminUserStatus> = {};
+      const planMap: Record<string, 'FREE' | 'PRO' | 'PREMIUM'> = {};
+      const creditsMap: Record<string, number> = {};
       res.users.forEach((user) => {
         statusMap[user.id] = user.status;
+        planMap[user.id] = user.plan || 'FREE';
+        creditsMap[user.id] = user.credits || 0;
       });
       setDraftStatus(statusMap);
+      setDraftPlan(planMap);
+      setDraftCredits(creditsMap);
     } catch (err: any) {
       setError(err.message || 'Failed to load users');
     } finally {
@@ -283,12 +291,12 @@ function UsersPage() {
 
   const saveUser = async (user: AdminUserApi) => {
     const status = draftStatus[user.id];
-    if (!status) return;
-    if (status === user.status) return;
+    const plan = draftPlan[user.id];
+    const credits = draftCredits[user.id];
     setSavingId(user.id);
     setError('');
     try {
-      await patchAdminUser(user.id, { status });
+      await patchAdminUser(user.id, { status, plan, credits });
       await load();
     } catch (err: any) {
       setError(err.message || 'Failed to update user');
@@ -300,7 +308,7 @@ function UsersPage() {
   return (
     <div className="dash-card">
       <div className="dash-card-header">
-        <span className="dash-card-title">Users</span>
+        <span className="dash-card-title">Users Directory</span>
         <span style={{ color: 'var(--color-on-surface-variant)', fontSize: 13 }}>{total} total</span>
       </div>
       {loading && <p style={{ padding: 16, color: 'var(--color-on-surface-variant)' }}>Loading users...</p>}
@@ -308,42 +316,96 @@ function UsersPage() {
       {!loading &&
         !error &&
         rows.map((user) => (
-          <div key={user.id} className="empr-activity-item">
+          <div key={user.id} className="empr-activity-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 16 }}>
             <div className="empr-activity-icon">
               <span className="material-symbols-outlined">person</span>
             </div>
             <div style={{ flex: 1 }}>
-              <p className="empr-activity-text" style={{ fontWeight: 600 }}>{user.displayName || user.email}</p>
-              <p className="empr-activity-time">
-                {user.email} · {user.uid || 'no-uid'} · {titleCase(user.role)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <p className="empr-activity-text" style={{ fontWeight: 600 }}>{user.displayName || user.email}</p>
+                <span className={`dash-status ${user.status?.toLowerCase() || 'active'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                  {user.status}
+                </span>
+                <span className={`plan-badge ${user.plan?.toLowerCase() || 'free'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                  {user.plan}
+                </span>
+                {user.role === 'EMPLOYER' && (
+                  <span className="plan-badge credits" style={{ fontSize: 10, padding: '2px 8px' }}>
+                    {user.credits || 0} Credits
+                  </span>
+                )}
+              </div>
+              <p className="empr-activity-time" style={{ marginTop: 4 }}>
+                Email: <strong>{user.email}</strong> · UID: {user.uid || 'no-uid'} · Role: {titleCase(user.role)}
               </p>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <select
-                  className="glass-input"
-                  value={draftStatus[user.id] || user.status}
-                  onChange={(e) => setDraftStatus((prev) => ({ ...prev, [user.id]: e.target.value as AdminUserStatus }))}
-                >
-                  {userStatuses.map((status) => (
-                    <option key={status} value={status}>
-                      {titleCase(status)}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  className="btn btn-gold"
-                  onClick={() =>
-                    setDraftStatus((prev) => ({
-                      ...prev,
-                      [user.id]: (prev[user.id] || user.status) === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED',
-                    }))
-                  }
-                  disabled={Boolean(savingId)}
-                >
-                  {(draftStatus[user.id] || user.status) === 'SUSPENDED' ? 'Restore Access' : 'Revoke Access'}
-                </button>
-                <button className="btn btn-ghost" onClick={() => saveUser(user)} disabled={Boolean(savingId)}>
-                  {savingId === user.id ? 'Saving...' : 'Apply'}
-                </button>
+              
+              <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Status:</span>
+                  <select
+                    className="glass-input"
+                    value={draftStatus[user.id] || user.status}
+                    onChange={(e) => setDraftStatus((prev) => ({ ...prev, [user.id]: e.target.value as AdminUserStatus }))}
+                    style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }}
+                  >
+                    {userStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {titleCase(status)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Plan:</span>
+                  <select
+                    className="glass-input"
+                    value={draftPlan[user.id] || user.plan}
+                    onChange={(e) => setDraftPlan((prev) => ({ ...prev, [user.id]: e.target.value as any }))}
+                    style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }}
+                  >
+                    <option value="FREE">Free</option>
+                    <option value="PRO">Employer Pro</option>
+                    <option value="PREMIUM">Candidate Premium</option>
+                  </select>
+                </div>
+
+                {user.role === 'EMPLOYER' && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Credits:</span>
+                    <input
+                      type="number"
+                      className="glass-input"
+                      value={draftCredits[user.id] !== undefined ? draftCredits[user.id] : (user.credits || 0)}
+                      onChange={(e) => setDraftCredits((prev) => ({ ...prev, [user.id]: parseInt(e.target.value, 10) || 0 }))}
+                      style={{ width: '70px', padding: '4px 8px', fontSize: 12 }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+                  <button
+                    className="btn btn-gold"
+                    onClick={() =>
+                      setDraftStatus((prev) => ({
+                        ...prev,
+                        [user.id]: (prev[user.id] || user.status) === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED',
+                      }))
+                    }
+                    disabled={Boolean(savingId)}
+                    style={{ fontSize: 12, padding: '4px 10px' }}
+                  >
+                    {(draftStatus[user.id] || user.status) === 'SUSPENDED' ? 'Restore Access' : 'Revoke Access'}
+                  </button>
+                  <button 
+                    className="btn btn-ghost" 
+                    onClick={() => saveUser(user)} 
+                    disabled={Boolean(savingId)}
+                    style={{ fontSize: 12, padding: '4px 10px' }}
+                  >
+                    {savingId === user.id ? 'Applying...' : 'Apply Changes'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

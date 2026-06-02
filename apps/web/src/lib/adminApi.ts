@@ -57,6 +57,8 @@ export interface AdminUserApi {
   displayName: string;
   role: AdminUserRole;
   status: AdminUserStatus;
+  plan: 'FREE' | 'PRO' | 'PREMIUM';
+  credits?: number;
   createdAt?: string | null;
   updatedAt?: string | null;
 }
@@ -110,7 +112,10 @@ export async function getAdminUsers(params: {
   return request<{ users: AdminUserApi[]; total: number; limit: number; offset: number }>(`/api/admin/users${suffix}`);
 }
 
-export async function patchAdminUser(userId: string, payload: { status?: AdminUserStatus }) {
+export async function patchAdminUser(
+  userId: string,
+  payload: { status?: AdminUserStatus; plan?: 'FREE' | 'PRO' | 'PREMIUM'; credits?: number }
+) {
   return request<{ ok: boolean }>(`/api/admin/users/${userId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
