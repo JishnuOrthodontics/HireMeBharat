@@ -57,11 +57,12 @@ export default function LandingPage() {
 
         <div className="container hero-content">
           <div className="hero-badge">
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>auto_awesome</span>
+            <span className="hero-badge-dot" />
+            <span className="material-symbols-outlined" style={{ fontSize: 14 }}>auto_awesome</span>
             AI-Powered Concierge Recruitment
           </div>
 
-          <h1 className="text-hero">
+          <h1 className="text-hero text-glow-hero">
             Your Career,<br />
             <span className="text-gradient-emerald">Curated.</span>
           </h1>
@@ -92,11 +93,17 @@ export default function LandingPage() {
           </div>
 
           <div className="hero-trust">
-            <span className="text-caption" style={{ color: 'var(--color-on-surface-variant)' }}>Trusted by teams at</span>
-            <div className="trust-logos">
-              {['Google', 'Meta', 'Stripe', 'Coinbase', 'Figma'].map(name => (
-                <span key={name} className="trust-logo">{name}</span>
-              ))}
+            <span className="text-caption" style={{ color: 'var(--color-on-surface-variant)', letterSpacing: '0.05em', opacity: 0.8 }}>Trusted by teams at</span>
+            <div className="marquee-container">
+              <div className="marquee-content">
+                {['Google', 'Meta', 'Stripe', 'Coinbase', 'Figma', 'Amazon', 'Netflix', 'Microsoft', 'Uber', 'Airbnb'].map((name, i) => (
+                  <span key={`l1-${i}`} className="trust-logo">{name}</span>
+                ))}
+                {/* Duplicate for infinite marquee loop */}
+                {['Google', 'Meta', 'Stripe', 'Coinbase', 'Figma', 'Amazon', 'Netflix', 'Microsoft', 'Uber', 'Airbnb'].map((name, i) => (
+                  <span key={`l2-${i}`} className="trust-logo">{name}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
