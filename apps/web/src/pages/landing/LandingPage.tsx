@@ -113,6 +113,70 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ===== LIVE OPPORTUNITIES SHOWCASE ===== */}
+      <section className="section section-tight" id="live-matches" style={{ position: 'relative', overflow: 'hidden', paddingBottom: 40 }}>
+        <div className="container">
+          <div className="section-header" style={{ marginBottom: 32 }}>
+            <span className="section-badge chip-emerald">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>bolt</span>
+              Live Matching Engine
+            </span>
+            <h2 className="text-h1">Elite positions <span className="text-gradient-emerald">matching now</span></h2>
+            <p className="text-body-md section-subtitle" style={{ maxWidth: 500, margin: '8px auto 0' }}>
+              Real-time premium requisitions active on our concierge network.
+            </p>
+          </div>
+
+          <div className="live-matches-marquee">
+            <div className="live-matches-track">
+              {[
+                { title: 'VP of Product Engineering', company: 'Stealth AI Startup', loc: 'San Francisco · Hybrid', match: '94% Match', salary: '$240k - $300k', tags: ['AI/ML', 'Scale-up'] },
+                { title: 'Chief Technology Officer', company: 'FinTech Systems', loc: 'London · Remote', match: '96% Match', salary: '£180k - £220k', tags: ['Fintech', 'Rust'] },
+                { title: 'Head of AI Infrastructure', company: 'NextGen Robotics', loc: 'New York · Remote', match: '91% Match', salary: '$220k - $280k', tags: ['Robotics', 'AWS'] },
+                { title: 'Lead Product Designer', company: 'Figma Partner', loc: 'Remote · Hybrid', match: '89% Match', salary: '$140k - $180k', tags: ['Figma', 'UI/UX'] },
+                { title: 'VP of Engineering', company: 'Web3 Gateway', loc: 'Berlin · Hybrid', match: '95% Match', salary: '€160k - €200k', tags: ['Solidity', 'Go'] }
+              ].map((m, idx) => (
+                <div key={idx} className="live-match-card glass-card">
+                  <div className="live-match-header">
+                    <span className="live-match-badge">{m.match}</span>
+                    <span className="live-match-salary">{m.salary}</span>
+                  </div>
+                  <h3 className="live-match-title">{m.title}</h3>
+                  <p className="live-match-company">{m.company} · <span style={{ opacity: 0.7 }}>{m.loc}</span></p>
+                  <div className="live-match-tags">
+                    {m.tags.map((t, i) => (
+                      <span key={i} className="live-match-tag">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              {/* Duplicate for infinite loop */}
+              {[
+                { title: 'VP of Product Engineering', company: 'Stealth AI Startup', loc: 'San Francisco · Hybrid', match: '94% Match', salary: '$240k - $300k', tags: ['AI/ML', 'Scale-up'] },
+                { title: 'Chief Technology Officer', company: 'FinTech Systems', loc: 'London · Remote', match: '96% Match', salary: '£180k - £220k', tags: ['Fintech', 'Rust'] },
+                { title: 'Head of AI Infrastructure', company: 'NextGen Robotics', loc: 'New York · Remote', match: '91% Match', salary: '$220k - $280k', tags: ['Robotics', 'AWS'] },
+                { title: 'Lead Product Designer', company: 'Figma Partner', loc: 'Remote · Hybrid', match: '89% Match', salary: '$140k - $180k', tags: ['Figma', 'UI/UX'] },
+                { title: 'VP of Engineering', company: 'Web3 Gateway', loc: 'Berlin · Hybrid', match: '95% Match', salary: '€160k - €200k', tags: ['Solidity', 'Go'] }
+              ].map((m, idx) => (
+                <div key={`dup-${idx}`} className="live-match-card glass-card">
+                  <div className="live-match-header">
+                    <span className="live-match-badge">{m.match}</span>
+                    <span className="live-match-salary">{m.salary}</span>
+                  </div>
+                  <h3 className="live-match-title">{m.title}</h3>
+                  <p className="live-match-company">{m.company} · <span style={{ opacity: 0.7 }}>{m.loc}</span></p>
+                  <div className="live-match-tags">
+                    {m.tags.map((t, i) => (
+                      <span key={i} className="live-match-tag">{t}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ===== FOR EMPLOYEES ===== */}
       <section className="section" id="features">
         <div className="container">

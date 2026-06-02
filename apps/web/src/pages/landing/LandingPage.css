@@ -851,3 +851,115 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3) !important;
 }
+
+/* ===== Live Matches Showcase ===== */
+.live-matches-marquee {
+  overflow: hidden;
+  width: 100%;
+  padding: 12px 0;
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.live-matches-track {
+  display: flex;
+  gap: 24px;
+  width: max-content;
+  animation: marquee-scroll 35s linear infinite;
+}
+
+.live-matches-track:hover {
+  animation-play-state: paused;
+}
+
+.live-match-card {
+  width: 310px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all var(--transition-base);
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+}
+
+.live-match-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  transition: background var(--transition-base);
+}
+
+.live-match-card:hover::before {
+  background: linear-gradient(135deg, rgba(80, 250, 123, 0.3) 0%, rgba(212, 175, 55, 0.3) 100%);
+}
+
+.live-match-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4), 0 0 25px rgba(80, 250, 123, 0.05);
+}
+
+.live-match-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-match-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(80, 250, 123, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(80, 250, 123, 0.25);
+}
+
+.live-match-salary {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+.live-match-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  margin: 4px 0 0 0;
+}
+
+.live-match-company {
+  font-size: 13px;
+  color: var(--color-on-surface-variant);
+  margin: 0;
+}
+
+.live-match-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.live-match-tag {
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.65);
+}
