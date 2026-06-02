@@ -126,13 +126,19 @@
 .public-footer {
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding: var(--space-xl) 0 var(--space-md);
-  background: var(--color-surface-container-lowest);
+  position: relative;
+  overflow: hidden;
+  background: 
+    radial-gradient(circle at 50% 100%, rgba(80, 250, 123, 0.05) 0%, rgba(124, 58, 237, 0.04) 45%, transparent 75%),
+    linear-gradient(to bottom, #131313 0%, #08080d 100%);
 }
 
 .footer-inner {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  position: relative;
+  z-index: 2;
 }
 
 .footer-brand {
@@ -147,7 +153,7 @@
 }
 
 .footer-tagline {
-  color: var(--color-on-surface-variant);
+  color: rgba(255, 255, 255, 0.65);
   font-size: 14px;
   line-height: 1.5;
 }
@@ -167,25 +173,26 @@
 
 .footer-col h4 {
   font-family: var(--font-display);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-on-surface);
-  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .footer-col a {
   display: block;
   font-size: 14px;
-  color: var(--color-on-surface-variant);
-  padding: 4px 0;
-  transition: color var(--transition-fast);
+  color: rgba(255, 255, 255, 0.55);
+  padding: 5px 0;
+  transition: all var(--transition-fast);
   text-decoration: none;
 }
 
 .footer-col a:hover {
   color: var(--color-primary-container);
+  transform: translateX(3px);
 }
 
 .footer-bottom {
@@ -195,6 +202,5 @@
 
 .footer-bottom p {
   font-size: 13px;
-  color: var(--color-on-surface-variant);
-  opacity: 0.7;
+  color: rgba(255, 255, 255, 0.4);
 }
