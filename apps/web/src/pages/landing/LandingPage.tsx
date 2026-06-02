@@ -62,7 +62,11 @@ export default function LandingPage() {
             AI-Powered Concierge Recruitment
           </div>
 
-          <h1 className="text-hero text-glow-hero">
+          <p className="hero-motto-text text-gradient-gold">
+            Life changes from now, Right place for dreaming high
+          </p>
+
+          <h1 className="text-hero text-glow-hero" style={{ marginTop: 8 }}>
             Your Career,<br />
             <span className="text-gradient-emerald">Curated.</span>
           </h1>
