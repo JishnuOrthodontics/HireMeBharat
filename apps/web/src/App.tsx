@@ -17,6 +17,8 @@ const Register = lazy(() => import('./pages/auth/Register'));
 const RoleSelect = lazy(() => import('./pages/auth/RoleSelect'));
 const JobSearch = lazy(() => import('./pages/jobs/JobSearch'));
 const JobDetails = lazy(() => import('./pages/jobs/JobDetails'));
+const AboutPage = lazy(() => import('./pages/about/AboutPage'));
+const ContactPage = lazy(() => import('./pages/contact/ContactPage'));
 
 // Lazy-loaded dashboard layouts
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -65,6 +67,8 @@ function App() {
                 {/* Public Routes */}
                 <Route element={<PublicLayout />}>
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
                   <Route path="/signin" element={
                     <PublicOnlyGuard><SignIn /></PublicOnlyGuard>
                   } />

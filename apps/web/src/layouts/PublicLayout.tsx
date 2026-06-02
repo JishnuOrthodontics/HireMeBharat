@@ -41,6 +41,8 @@ export default function PublicLayout() {
             <a href="/#how-it-works" className="nav-link">How It Works</a>
             <a href="/#pricing" className="nav-link">Pricing</a>
             <a href="/#testimonials" className="nav-link">Testimonials</a>
+            <Link to="/about" className="nav-link">About Us</Link>
+            <Link to="/contact" className="nav-link">Contact</Link>
           </nav>
 
           <div className="header-actions desktop-only">
@@ -68,6 +70,8 @@ export default function PublicLayout() {
             <a href="/#how-it-works" className="mobile-nav-link">How It Works</a>
             <a href="/#pricing" className="mobile-nav-link">Pricing</a>
             <a href="/#testimonials" className="mobile-nav-link">Testimonials</a>
+            <Link to="/about" className="mobile-nav-link">About Us</Link>
+            <Link to="/contact" className="mobile-nav-link">Contact</Link>
             <div className="mobile-nav-divider" />
             {firebaseUser ? (
               <Link to={dashboardPath} className="btn btn-primary" style={{ width: '100%', marginTop: 8 }}>Go to Dashboard</Link>
@@ -107,9 +111,9 @@ export default function PublicLayout() {
             </div>
             <div className="footer-col">
               <h4>Company</h4>
-              <a href="#">About</a>
+              <Link to="/about">About Us</Link>
               <a href="#">Careers</a>
-              <a href="#">Contact</a>
+              <Link to="/contact">Contact</Link>
             </div>
             <div className="footer-col">
               <h4>Legal</h4>

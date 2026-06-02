@@ -66,7 +66,7 @@ export default function LandingPage() {
             Life changes from now, Right place for dreaming high
           </p>
 
-          <h1 className="text-hero text-glow-hero" style={{ marginTop: 8 }}>
+<h1 className="text-hero text-glow-hero" style={{ marginTop: 8 }}>
             Your Career,<br />
             <span className="text-gradient-emerald">Curated.</span>
           </h1>
@@ -93,6 +93,17 @@ export default function LandingPage() {
               <span className="cta-arrow gold">
                 <span className="material-symbols-outlined">arrow_forward</span>
               </span>
+            </Link>
+          </div>
+
+          <div className="hero-page-links">
+            <Link to="/about" className="hero-page-link btn btn-ghost">
+              <span className="material-symbols-outlined">info</span>
+              Learn About Us
+            </Link>
+            <Link to="/contact" className="hero-page-link btn btn-ghost">
+              <span className="material-symbols-outlined">mail</span>
+              Contact
             </Link>
           </div>
 
