@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { searchJobListings, getJobAutocompleteSuggestions, type JobListingApi } from '../../lib/jobsApi';
 import './Jobs.css';
 
@@ -26,6 +26,7 @@ function timeAgo(dateStr?: string | null): string {
 export default function JobSearch() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const currentLoc = useLocation();
   
   // Core states
   const [listings, setListings] = useState<JobListingApi[]>([]);
@@ -421,7 +422,10 @@ export default function JobSearch() {
                 <div
                   key={job.id}
                   className={`job-card ${job.featured ? 'featured' : ''}`}
-                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  onClick={() => {
+                    const isEmployeeDashboard = currentLoc.pathname.startsWith('/employee');
+                    navigate(isEmployeeDashboard ? `/employee/jobs/${job.id}` : `/jobs/${job.id}`);
+                  }}
                   style={{ animationDelay: `${idx * 40}ms`, animation: 'fadeInUp 0.4s ease forwards', opacity: 0 }}
                 >
                   {job.featured && <span className="job-card-featured-badge">★ Featured</span>}

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import './PublicLayout.css';
 
 export default function PublicLayout() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const { firebaseUser, userProfile } = useAuth();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -17,6 +19,12 @@ export default function PublicLayout() {
     setMenuOpen(false);
     window.scrollTo(0, 0);
   }, [location]);
+
+  const dashboardPath = userProfile?.role === 'ADMIN' 
+    ? '/admin' 
+    : userProfile?.role === 'EMPLOYER' 
+      ? '/employer' 
+      : '/employee';
 
   return (
     <div className="public-layout">
@@ -35,8 +43,14 @@ export default function PublicLayout() {
           </nav>
 
           <div className="header-actions desktop-only">
-            <Link to="/signin" className="btn btn-ghost">Sign In</Link>
-            <Link to="/register" className="btn btn-primary">Register</Link>
+            {firebaseUser ? (
+              <Link to={dashboardPath} className="btn btn-primary">Go to Dashboard</Link>
+            ) : (
+              <>
+                <Link to="/signin" className="btn btn-ghost">Sign In</Link>
+                <Link to="/register" className="btn btn-primary">Register</Link>
+              </>
+            )}
           </div>
 
           <button className="mobile-menu-btn mobile-only" onClick={() => setMenuOpen(!menuOpen)}>
@@ -53,8 +67,14 @@ export default function PublicLayout() {
             <a href="/#how-it-works" className="mobile-nav-link">How It Works</a>
             <a href="/#testimonials" className="mobile-nav-link">Testimonials</a>
             <div className="mobile-nav-divider" />
-            <Link to="/signin" className="mobile-nav-link">Sign In</Link>
-            <Link to="/register" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }}>Register</Link>
+            {firebaseUser ? (
+              <Link to={dashboardPath} className="btn btn-primary" style={{ width: '100%', marginTop: 8 }}>Go to Dashboard</Link>
+            ) : (
+              <>
+                <Link to="/signin" className="mobile-nav-link">Sign In</Link>
+                <Link to="/register" className="btn btn-primary" style={{ width: '100%', marginTop: 8 }}>Register</Link>
+              </>
+            )}
           </nav>
         </div>
       )}

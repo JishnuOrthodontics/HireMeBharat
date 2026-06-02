@@ -14,11 +14,13 @@ import { useEmployeeProfile, useEmployeeDashboardSummary, useNotifications, useE
 import { type EmployeeProfileApi } from '../../lib/employeeApi';
 import BillingSettings from '../shared/BillingSettings';
 import Pricing from '../shared/Pricing';
+import JobSearch from '../jobs/JobSearch';
+import JobDetails from '../jobs/JobDetails';
 import './Employee.css';
 
 const navItems = [
   { icon: 'home', label: 'Home', path: '/employee' },
-  { icon: 'search', label: 'Jobs', path: '/jobs' },
+  { icon: 'search', label: 'Jobs', path: '/employee/jobs' },
   { icon: 'work', label: 'Matches', path: '/employee/matches', badge: 5 },
   { icon: 'description', label: 'Applications', path: '/employee/applications' },
   { icon: 'support_agent', label: 'Concierge', path: '/employee/concierge', badge: 2 },
@@ -333,6 +335,8 @@ export default function Dashboard() {
         <Route path="feedback" element={<EmployeeFeedback />} />
         <Route path="settings" element={<EmployeeSettings />} />
         <Route path="pricing" element={<Pricing />} />
+        <Route path="jobs" element={<JobSearch />} />
+        <Route path="jobs/:id" element={<JobDetails />} />
         <Route path="*" element={<EmployeeFeed />} />
       </Routes>
     </DashboardLayout>

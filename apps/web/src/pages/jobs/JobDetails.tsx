@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getJobListingById, applyToJob, type JobListingApi } from '../../lib/jobsApi';
 import { useAuth } from '../../contexts/AuthContext';
 import './Jobs.css';
@@ -19,6 +19,7 @@ function timeAgo(dateStr?: string | null): string {
 export default function JobDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { firebaseUser, userProfile } = useAuth();
 
   const [listing, setListing] = useState<JobListingApi | null>(null);
@@ -70,10 +71,13 @@ export default function JobDetails() {
     );
   }
 
+  const isEmployeeDashboard = location.pathname.startsWith('/employee');
+  const backPath = isEmployeeDashboard ? '/employee/jobs' : '/jobs';
+
   if (error || !listing) {
     return (
       <div className="job-detail">
-        <button className="job-detail-back" onClick={() => navigate('/jobs')}>
+        <button className="job-detail-back" onClick={() => navigate(backPath)}>
           <span className="material-symbols-outlined">arrow_back</span> Back to Jobs
         </button>
         <div className="jobs-empty">
@@ -89,7 +93,7 @@ export default function JobDetails() {
 
   return (
     <div className="job-detail">
-      <button className="job-detail-back" onClick={() => navigate('/jobs')}>
+      <button className="job-detail-back" onClick={() => navigate(backPath)}>
         <span className="material-symbols-outlined">arrow_back</span> Back to Jobs
       </button>
 
