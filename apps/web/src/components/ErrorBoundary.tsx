@@ -24,11 +24,12 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary caught an unhandled error:', error, errorInfo);
     
     // Automatically intercept chunk loading errors (Vite production bundle upgrades) and reload the page
-    const errorStr = error?.toString() || '';
+    const errorStr = ((error?.toString() || '') + ' ' + (error?.message || '') + ' ' + (error?.stack || '')).toLowerCase();
     if (
-      errorStr.includes('Failed to fetch dynamically imported module') ||
-      errorStr.includes('ChunkLoadError') ||
-      errorStr.includes('Loading chunk')
+      errorStr.includes('failed to fetch dynamically imported module') ||
+      errorStr.includes('chunkloaderror') ||
+      errorStr.includes('loading chunk') ||
+      errorStr.includes('failed to fetch')
     ) {
       console.warn('Chunk loading error detected! Force-reloading the platform...');
       window.location.reload();
