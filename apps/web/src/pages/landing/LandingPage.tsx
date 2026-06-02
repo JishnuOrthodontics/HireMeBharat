@@ -41,6 +41,9 @@ function AnimatedCounter({ end, suffix = '', duration = 2000 }: { end: number; s
    Landing Page
    ============================================================ */
 export default function LandingPage() {
+  const [pricingRole, setPricingRole] = useState<'employer' | 'employee'>('employer');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+
   return (
     <div className="landing-page">
       {/* ===== HERO SECTION ===== */}
@@ -202,6 +205,237 @@ export default function LandingPage() {
                 <p className="stat-label text-label-caps">{s.label}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== PRICING SECTION ===== */}
+      <section className="section" id="pricing">
+        <div className="container">
+          <div className="section-header">
+            <span className="section-badge chip-gold">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>payments</span>
+              Transparent Pricing
+            </span>
+            <h2 className="text-h1">Find your perfect <span className="text-gradient-emerald">plan</span></h2>
+            <p className="text-body-lg section-subtitle">Unlock advanced matching tools, high-priority pipelines, and concierge guidance.</p>
+          </div>
+
+          {/* Interactive Role Tabs */}
+          <div className="pricing-role-tabs">
+            <button
+              className={`role-tab-btn ${pricingRole === 'employer' ? 'active employer-active' : ''}`}
+              onClick={() => setPricingRole('employer')}
+            >
+              <span className="material-symbols-outlined">business</span>
+              I'm Hiring (Employer)
+            </button>
+            <button
+              className={`role-tab-btn ${pricingRole === 'employee' ? 'active employee-active' : ''}`}
+              onClick={() => setPricingRole('employee')}
+            >
+              <span className="material-symbols-outlined">person</span>
+              I'm Looking (Candidate)
+            </button>
+          </div>
+
+          {/* Billing Cycle Toggle */}
+          <div className="landing-cycle-toggle-wrap">
+            <button
+              className={`landing-cycle-toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
+              onClick={() => setBillingCycle('monthly')}
+            >
+              Monthly
+            </button>
+            <button
+              className={`landing-cycle-toggle-btn ${billingCycle === 'yearly' ? 'active' : ''}`}
+              onClick={() => setBillingCycle('yearly')}
+            >
+              Yearly <span className="landing-save-badge">Save 20%</span>
+            </button>
+          </div>
+
+          {/* Pricing Cards Grid */}
+          <div className="landing-pricing-grid">
+            {pricingRole === 'employer' ? (
+              <>
+                {/* Employer Free Plan */}
+                <div className="landing-pricing-card glass-card">
+                  <div className="card-header">
+                    <h3 className="plan-name">Free Plan</h3>
+                    <p className="plan-tagline">Essential platform entry to search and browse.</p>
+                    <div className="plan-price">
+                      <span className="currency">$</span>
+                      <span className="amount">0</span>
+                      <span className="period">/mo</span>
+                    </div>
+                  </div>
+                  <div className="plan-features">
+                    <ul>
+                      <li>
+                        <span className="material-symbols-outlined check-icon">done</span>
+                        Post up to 3 job listings
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon">done</span>
+                        Basic matching scores
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon">done</span>
+                        Standard email notifications
+                      </li>
+                      <li className="disabled">
+                        <span className="material-symbols-outlined close-icon">close</span>
+                        Direct candidate unlock details
+                      </li>
+                      <li className="disabled">
+                        <span className="material-symbols-outlined close-icon">close</span>
+                        Advanced stats and insights
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="card-action">
+                    <Link to="/register?role=employer" className="btn btn-ghost w-100">
+                      Get Started Free
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Employer Pro Plan */}
+                <div className="landing-pricing-card glass-card premium-card employer-pro-card">
+                  <div className="premium-glow" />
+                  <div className="popular-badge">Most Popular</div>
+                  <div className="card-header">
+                    <h3 className="plan-name">Employer Pro</h3>
+                    <p className="plan-tagline">Complete hiring workspace with unlimited posts.</p>
+                    <div className="plan-price">
+                      <span className="currency">$</span>
+                      <span className="amount">{billingCycle === 'yearly' ? '79' : '99'}</span>
+                      <span className="period">/mo</span>
+                    </div>
+                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually ($948/yr)</p>}
+                  </div>
+                  <div className="plan-features">
+                    <ul>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        <strong>Unlimited active job postings</strong>
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        <strong>Direct access to unlocked resumes & details</strong>
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        Full Dynamic matches pipelines access
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        AI prioritized candidate matching briefs
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        Gold PRO company profile badge
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="card-action">
+                    <Link to="/register?role=employer&plan=pro" className="btn btn-primary w-100 btn-gold-gradient">
+                      Upgrade to Pro
+                    </Link>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Candidate Free Plan */}
+                <div className="landing-pricing-card glass-card">
+                  <div className="card-header">
+                    <h3 className="plan-name">Free Plan</h3>
+                    <p className="plan-tagline">Standard search and applications.</p>
+                    <div className="plan-price">
+                      <span className="currency">$</span>
+                      <span className="amount">0</span>
+                      <span className="period">/mo</span>
+                    </div>
+                  </div>
+                  <div className="plan-features">
+                    <ul>
+                      <li>
+                        <span className="material-symbols-outlined check-icon">done</span>
+                        Standard job search and applications
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon">done</span>
+                        Complete professional profile strength
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon">done</span>
+                        Standard email notifications
+                      </li>
+                      <li className="disabled">
+                        <span className="material-symbols-outlined close-icon">close</span>
+                        Premium profile search ranking boost
+                      </li>
+                      <li className="disabled">
+                        <span className="material-symbols-outlined close-icon">close</span>
+                        Advanced stats and insights
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="card-action">
+                    <Link to="/register?role=employee" className="btn btn-ghost w-100">
+                      Get Started Free
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Candidate Premium Plan */}
+                <div className="landing-pricing-card glass-card premium-card candidate-premium-card">
+                  <div className="premium-glow" />
+                  <div className="popular-badge">High Recommendation</div>
+                  <div className="card-header">
+                    <h3 className="plan-name">Candidate Premium</h3>
+                    <p className="plan-tagline">Double your matches and stand out instantly.</p>
+                    <div className="plan-price">
+                      <span className="currency">$</span>
+                      <span className="amount">{billingCycle === 'yearly' ? '15' : '19'}</span>
+                      <span className="period">/mo</span>
+                    </div>
+                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually ($180/yr)</p>}
+                  </div>
+                  <div className="plan-features">
+                    <ul>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        <strong>2x higher ranking in recruiter search results</strong>
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        <strong>Advanced salary comparison stats per match</strong>
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        Pulsing Gold Premium ring on avatar
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        Priority support responses
+                      </li>
+                      <li>
+                        <span className="material-symbols-outlined check-icon text-gold">star</span>
+                        Sarah Jenkins prioritized advice sessions
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="card-action">
+                    <Link to="/register?role=employee&plan=premium" className="btn btn-primary w-100 btn-gold-gradient">
+                      Upgrade to Premium
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </section>
