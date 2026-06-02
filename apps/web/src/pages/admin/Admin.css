@@ -40,3 +40,90 @@
   font-size: 13px;
   color: var(--color-on-surface-variant);
 }
+
+/* Custom User Cards for Admin Directory */
+.admin-user-card {
+  display: flex;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  align-items: flex-start;
+  transition: background var(--transition-base);
+}
+
+.admin-user-card:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-user-card:last-child {
+  border-bottom: none;
+}
+
+.admin-user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
+
+.admin-user-avatar .material-symbols-outlined {
+  font-size: 22px;
+}
+
+.admin-user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-user-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-user-actions-row {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  width: 100%;
+}
+
+.admin-user-action-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-user-action-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-on-surface-variant);
+  letter-spacing: 0.02em;
+}
+
+.admin-user-buttons {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .admin-user-card {
+    padding: 16px;
+  }
+  .admin-user-buttons {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+

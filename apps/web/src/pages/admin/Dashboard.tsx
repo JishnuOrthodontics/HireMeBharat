@@ -316,37 +316,37 @@ function UsersPage() {
       {!loading &&
         !error &&
         rows.map((user) => (
-          <div key={user.id} className="empr-activity-item" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 16 }}>
-            <div className="empr-activity-icon">
+          <div key={user.id} className="admin-user-card">
+            <div className="admin-user-avatar">
               <span className="material-symbols-outlined">person</span>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <p className="empr-activity-text" style={{ fontWeight: 600 }}>{user.displayName || user.email}</p>
-                <span className={`dash-status ${user.status?.toLowerCase() || 'active'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+            <div className="admin-user-details">
+              <div className="admin-user-title-row">
+                <p className="empr-activity-text" style={{ fontWeight: 600, fontSize: '15px' }}>{user.displayName || user.email}</p>
+                <span className={`dash-status ${user.status?.toLowerCase() || 'active'}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
                   {user.status}
                 </span>
-                <span className={`plan-badge ${user.plan?.toLowerCase() || 'free'}`} style={{ fontSize: 10, padding: '2px 8px' }}>
+                <span className={`plan-badge ${user.plan?.toLowerCase() || 'free'}`} style={{ fontSize: '10px', padding: '2px 8px' }}>
                   {user.plan}
                 </span>
                 {user.role === 'EMPLOYER' && (
-                  <span className="plan-badge credits" style={{ fontSize: 10, padding: '2px 8px' }}>
+                  <span className="plan-badge credits" style={{ fontSize: '10px', padding: '2px 8px' }}>
                     {user.credits || 0} Credits
                   </span>
                 )}
               </div>
-              <p className="empr-activity-time" style={{ marginTop: 4 }}>
+              <p className="empr-activity-time" style={{ marginTop: '6px' }}>
                 Email: <strong>{user.email}</strong> · UID: {user.uid || 'no-uid'} · Role: {titleCase(user.role)}
               </p>
               
-              <div style={{ display: 'flex', gap: 12, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Status:</span>
+              <div className="admin-user-actions-row">
+                <div className="admin-user-action-group">
+                  <span className="admin-user-action-label">Status:</span>
                   <select
                     className="glass-input"
                     value={draftStatus[user.id] || user.status}
                     onChange={(e) => setDraftStatus((prev) => ({ ...prev, [user.id]: e.target.value as AdminUserStatus }))}
-                    style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }}
+                    style={{ width: 'auto', padding: '4px 8px', fontSize: '12px' }}
                   >
                     {userStatuses.map((status) => (
                       <option key={status} value={status}>
@@ -356,13 +356,13 @@ function UsersPage() {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Plan:</span>
+                <div className="admin-user-action-group">
+                  <span className="admin-user-action-label">Plan:</span>
                   <select
                     className="glass-input"
                     value={draftPlan[user.id] || user.plan}
                     onChange={(e) => setDraftPlan((prev) => ({ ...prev, [user.id]: e.target.value as any }))}
-                    style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }}
+                    style={{ width: 'auto', padding: '4px 8px', fontSize: '12px' }}
                   >
                     <option value="FREE">Free</option>
                     <option value="PRO">Employer Pro</option>
@@ -371,19 +371,19 @@ function UsersPage() {
                 </div>
 
                 {user.role === 'EMPLOYER' && (
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: 'var(--color-on-surface-variant)' }}>Credits:</span>
+                  <div className="admin-user-action-group">
+                    <span className="admin-user-action-label">Credits:</span>
                     <input
                       type="number"
                       className="glass-input"
                       value={draftCredits[user.id] !== undefined ? draftCredits[user.id] : (user.credits || 0)}
                       onChange={(e) => setDraftCredits((prev) => ({ ...prev, [user.id]: parseInt(e.target.value, 10) || 0 }))}
-                      style={{ width: '70px', padding: '4px 8px', fontSize: 12 }}
+                      style={{ width: '70px', padding: '4px 8px', fontSize: '12px' }}
                     />
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
+                <div className="admin-user-buttons">
                   <button
                     className="btn btn-gold"
                     onClick={() =>
@@ -393,7 +393,7 @@ function UsersPage() {
                       }))
                     }
                     disabled={Boolean(savingId)}
-                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
                   >
                     {(draftStatus[user.id] || user.status) === 'SUSPENDED' ? 'Restore Access' : 'Revoke Access'}
                   </button>
@@ -401,7 +401,7 @@ function UsersPage() {
                     className="btn btn-ghost" 
                     onClick={() => saveUser(user)} 
                     disabled={Boolean(savingId)}
-                    style={{ fontSize: 12, padding: '4px 10px' }}
+                    style={{ fontSize: '12px', padding: '4px 10px' }}
                   >
                     {savingId === user.id ? 'Applying...' : 'Apply Changes'}
                   </button>
