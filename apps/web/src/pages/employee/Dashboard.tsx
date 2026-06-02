@@ -177,10 +177,25 @@ function RightSidebar({
               </p>
             </div>
           </div>
-          <button className="btn btn-primary" style={{ width: '100%', marginTop: 12, fontSize: 13, padding: '8px 16px' }}>
+          <Link
+            to="/employee/concierge"
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              marginTop: 12,
+              fontSize: 13,
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+              textDecoration: 'none',
+              boxSizing: 'border-box'
+            }}
+          >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>chat</span>
             Send Message
-          </button>
+          </Link>
         </div>
       </div>
 
