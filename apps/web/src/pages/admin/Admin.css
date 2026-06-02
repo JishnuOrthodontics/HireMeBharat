@@ -335,4 +335,28 @@
   opacity: 0.8;
 }
 
+/* Role Badges for active candidates */
+.role-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 
+.role-badge.employee {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.08);
+}
+
+.role-badge.employer {
+  background: rgba(167, 139, 250, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.08);
+}

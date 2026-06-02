@@ -867,7 +867,12 @@ function SupportDeskPage() {
                   {(c.candidateName || 'C')[0].toUpperCase()}
                 </div>
                 <div className="admin-support-convo-info">
-                  <span className="admin-support-convo-name">{c.candidateName}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <span className="admin-support-convo-name">{c.candidateName}</span>
+                    <span className={`role-badge ${c.candidateRole === 'EMPLOYER' ? 'employer' : 'employee'}`} style={{ fontSize: '8px', padding: '1px 6px', flexShrink: 0 }}>
+                      {c.candidateRole === 'EMPLOYER' ? 'Employer' : 'Candidate'}
+                    </span>
+                  </div>
                   <p className="admin-support-convo-preview">{c.lastMessage || 'No messages yet'}</p>
                 </div>
               </button>
@@ -893,7 +898,12 @@ function SupportDeskPage() {
                 {(selectedConvo.candidateName || 'C')[0].toUpperCase()}
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{selectedConvo.candidateName}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{selectedConvo.candidateName}</p>
+                  <span className={`role-badge ${selectedConvo.candidateRole === 'EMPLOYER' ? 'employer' : 'employee'}`} style={{ fontSize: '9px', padding: '2px 8px' }}>
+                    {selectedConvo.candidateRole === 'EMPLOYER' ? 'Employer' : 'Candidate'}
+                  </span>
+                </div>
                 <p style={{ fontSize: 11, color: 'var(--color-on-surface-variant)', margin: '2px 0 0 0' }}>
                   Email: {selectedConvo.candidateEmail}
                 </p>

@@ -470,6 +470,7 @@ export async function adminRoutes(app: FastifyInstance) {
           employeeUid: convo.employeeUid,
           candidateName: candidate?.displayName || candidate?.email || 'Candidate',
           candidateEmail: candidate?.email || '',
+          candidateRole: candidate?.role || 'EMPLOYEE',
           lastMessage: convo.lastMessage || '',
           updatedAt: toIso(convo.updatedAt),
         };

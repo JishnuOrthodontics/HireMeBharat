@@ -180,6 +180,7 @@ export interface AdminConversationApi {
   employeeUid: string;
   candidateName: string;
   candidateEmail: string;
+  candidateRole: string;
   lastMessage: string;
   updatedAt: string | null;
 }
