@@ -130,11 +130,11 @@ export default function LandingPage() {
           <div className="live-matches-marquee">
             <div className="live-matches-track">
               {[
-                { title: 'VP of Product Engineering', company: 'Stealth AI Startup', loc: 'San Francisco · Hybrid', match: '94% Match', salary: '$240k - $300k', tags: ['AI/ML', 'Scale-up'] },
-                { title: 'Chief Technology Officer', company: 'FinTech Systems', loc: 'London · Remote', match: '96% Match', salary: '£180k - £220k', tags: ['Fintech', 'Rust'] },
-                { title: 'Head of AI Infrastructure', company: 'NextGen Robotics', loc: 'New York · Remote', match: '91% Match', salary: '$220k - $280k', tags: ['Robotics', 'AWS'] },
-                { title: 'Lead Product Designer', company: 'Figma Partner', loc: 'Remote · Hybrid', match: '89% Match', salary: '$140k - $180k', tags: ['Figma', 'UI/UX'] },
-                { title: 'VP of Engineering', company: 'Web3 Gateway', loc: 'Berlin · Hybrid', match: '95% Match', salary: '€160k - €200k', tags: ['Solidity', 'Go'] }
+                { title: 'VP of Product Engineering', company: 'Stealth AI Startup', loc: 'Bangalore · Hybrid', match: '94% Match', salary: '₹32L - ₹42L', tags: ['AI/ML', 'Scale-up'] },
+                { title: 'Chief Technology Officer', company: 'FinTech Systems', loc: 'Mumbai · Remote', match: '96% Match', salary: '₹45L - ₹65L', tags: ['Fintech', 'Rust'] },
+                { title: 'Head of AI Infrastructure', company: 'NextGen Robotics', loc: 'Delhi NCR · Remote', match: '91% Match', salary: '₹28L - ₹38L', tags: ['Robotics', 'AWS'] },
+                { title: 'Lead Product Designer', company: 'Figma Partner', loc: 'Bangalore · Hybrid', match: '89% Match', salary: '₹16L - ₹24L', tags: ['Figma', 'UI/UX'] },
+                { title: 'VP of Engineering', company: 'Web3 Gateway', loc: 'Pune · Hybrid', match: '95% Match', salary: '₹30L - ₹40L', tags: ['Solidity', 'Go'] }
               ].map((m, idx) => (
                 <div key={idx} className="live-match-card glass-card">
                   <div className="live-match-header">
@@ -152,11 +152,11 @@ export default function LandingPage() {
               ))}
               {/* Duplicate for infinite loop */}
               {[
-                { title: 'VP of Product Engineering', company: 'Stealth AI Startup', loc: 'San Francisco · Hybrid', match: '94% Match', salary: '$240k - $300k', tags: ['AI/ML', 'Scale-up'] },
-                { title: 'Chief Technology Officer', company: 'FinTech Systems', loc: 'London · Remote', match: '96% Match', salary: '£180k - £220k', tags: ['Fintech', 'Rust'] },
-                { title: 'Head of AI Infrastructure', company: 'NextGen Robotics', loc: 'New York · Remote', match: '91% Match', salary: '$220k - $280k', tags: ['Robotics', 'AWS'] },
-                { title: 'Lead Product Designer', company: 'Figma Partner', loc: 'Remote · Hybrid', match: '89% Match', salary: '$140k - $180k', tags: ['Figma', 'UI/UX'] },
-                { title: 'VP of Engineering', company: 'Web3 Gateway', loc: 'Berlin · Hybrid', match: '95% Match', salary: '€160k - €200k', tags: ['Solidity', 'Go'] }
+                { title: 'VP of Product Engineering', company: 'Stealth AI Startup', loc: 'Bangalore · Hybrid', match: '94% Match', salary: '₹32L - ₹42L', tags: ['AI/ML', 'Scale-up'] },
+                { title: 'Chief Technology Officer', company: 'FinTech Systems', loc: 'Mumbai · Remote', match: '96% Match', salary: '₹45L - ₹65L', tags: ['Fintech', 'Rust'] },
+                { title: 'Head of AI Infrastructure', company: 'NextGen Robotics', loc: 'Delhi NCR · Remote', match: '91% Match', salary: '₹28L - ₹38L', tags: ['Robotics', 'AWS'] },
+                { title: 'Lead Product Designer', company: 'Figma Partner', loc: 'Bangalore · Hybrid', match: '89% Match', salary: '₹16L - ₹24L', tags: ['Figma', 'UI/UX'] },
+                { title: 'VP of Engineering', company: 'Web3 Gateway', loc: 'Pune · Hybrid', match: '95% Match', salary: '₹30L - ₹40L', tags: ['Solidity', 'Go'] }
               ].map((m, idx) => (
                 <div key={`dup-${idx}`} className="live-match-card glass-card">
                   <div className="live-match-header">
@@ -340,7 +340,7 @@ export default function LandingPage() {
                     <h3 className="plan-name">Free Plan</h3>
                     <p className="plan-tagline">Essential platform entry to search and browse.</p>
                     <div className="plan-price">
-                      <span className="currency">$</span>
+                      <span className="currency">₹</span>
                       <span className="amount">0</span>
                       <span className="period">/mo</span>
                     </div>
@@ -384,11 +384,11 @@ export default function LandingPage() {
                     <h3 className="plan-name">Employer Pro</h3>
                     <p className="plan-tagline">Complete hiring workspace with unlimited posts.</p>
                     <div className="plan-price">
-                      <span className="currency">$</span>
-                      <span className="amount">{billingCycle === 'yearly' ? '79' : '99'}</span>
+                      <span className="currency">₹</span>
+                      <span className="amount">{billingCycle === 'yearly' ? '5,999' : '7,999'}</span>
                       <span className="period">/mo</span>
                     </div>
-                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually ($948/yr)</p>}
+                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹71,988/yr)</p>}
                   </div>
                   <div className="plan-features">
                     <ul>
@@ -429,7 +429,7 @@ export default function LandingPage() {
                     <h3 className="plan-name">Free Plan</h3>
                     <p className="plan-tagline">Standard search and applications.</p>
                     <div className="plan-price">
-                      <span className="currency">$</span>
+                      <span className="currency">₹</span>
                       <span className="amount">0</span>
                       <span className="period">/mo</span>
                     </div>
@@ -473,11 +473,11 @@ export default function LandingPage() {
                     <h3 className="plan-name">Candidate Premium</h3>
                     <p className="plan-tagline">Double your matches and stand out instantly.</p>
                     <div className="plan-price">
-                      <span className="currency">$</span>
-                      <span className="amount">{billingCycle === 'yearly' ? '15' : '19'}</span>
+                      <span className="currency">₹</span>
+                      <span className="amount">{billingCycle === 'yearly' ? '999' : '1,499'}</span>
                       <span className="period">/mo</span>
                     </div>
-                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually ($180/yr)</p>}
+                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹11,988/yr)</p>}
                   </div>
                   <div className="plan-features">
                     <ul>

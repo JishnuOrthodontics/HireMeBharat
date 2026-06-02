@@ -127,7 +127,7 @@ export default function Pricing() {
             <h3 className="plan-name">Free Plan</h3>
             <p className="plan-tagline">Essential platform entry to search and browse.</p>
             <div className="plan-price">
-              <span className="currency">$</span>
+              <span className="currency">₹</span>
               <span className="amount">0</span>
               <span className="period">/mo</span>
             </div>
@@ -173,11 +173,11 @@ export default function Pricing() {
               <h3 className="plan-name">Employer Pro</h3>
               <p className="plan-tagline">Complete hiring workspace with unlimited posts.</p>
               <div className="plan-price">
-                <span className="currency">$</span>
-                <span className="amount">{billingCycle === 'yearly' ? '79' : '99'}</span>
+                <span className="currency">₹</span>
+                <span className="amount">{billingCycle === 'yearly' ? '5,999' : '7,999'}</span>
                 <span className="period">/mo</span>
               </div>
-              {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually ($948/yr)</p>}
+              {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹71,988/yr)</p>}
             </div>
             <div className="plan-features">
               <ul>
@@ -222,11 +222,11 @@ export default function Pricing() {
               <h3 className="plan-name">Candidate Premium</h3>
               <p className="plan-tagline">Double your matches and stand out instantly.</p>
               <div className="plan-price">
-                <span className="currency">$</span>
-                <span className="amount">{billingCycle === 'yearly' ? '15' : '19'}</span>
+                <span className="currency">₹</span>
+                <span className="amount">{billingCycle === 'yearly' ? '999' : '1,499'}</span>
                 <span className="period">/mo</span>
               </div>
-              {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually ($180/yr)</p>}
+              {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹11,988/yr)</p>}
             </div>
             <div className="plan-features">
               <ul>
@@ -276,8 +276,8 @@ export default function Pricing() {
             </div>
           </div>
           <div className="credits-actions">
-            <button className="btn btn-ghost" onClick={() => handleBuyCredits(5)}>Buy 5 Credits ($25)</button>
-            <button className="btn btn-primary" onClick={() => handleBuyCredits(15)}>Buy 15 Credits ($75)</button>
+            <button className="btn btn-ghost" onClick={() => handleBuyCredits(5)}>Buy 5 Credits (₹1,999)</button>
+            <button className="btn btn-primary" onClick={() => handleBuyCredits(15)}>Buy 15 Credits (₹5,999)</button>
           </div>
         </div>
       )}
