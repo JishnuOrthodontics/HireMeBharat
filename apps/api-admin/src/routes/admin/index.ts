@@ -452,5 +452,50 @@ export async function adminRoutes(app: FastifyInstance) {
     );
     return reply.send({ ok: true });
   });
+
+  // GET /api/admin/conversations
+  app.get('/conversations', async (_request, reply) => {
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    const conversations = db.collection('employee_conversations');
+    const users = db.collection('users');
+
+    const convos = await conversations.find({}).sort({ updatedAt: -1 }).toArray();
+    const result = await Promise.all(
+      convos.map(async (convo) => {
+        const candidate = await users.findOne({ uid: convo.employeeUid });
+        return {
+          id: String(convo._id),
+          employeeUid: convo.employeeUid,
+          candidateName: candidate?.displayName || candidate?.email || 'Candidate',
+          candidateEmail: candidate?.email || '',
+          lastMessage: convo.lastMessage || '',
+          updatedAt: toIso(convo.updatedAt),
+        };
+      })
+    );
+
+    return reply.send({ conversations: result });
+  });
+
+  // GET /api/admin/conversations/:id/messages
+  app.get('/conversations/:id/messages', async (request, reply) => {
+    const id = (request.params as any)?.id;
+    const db = app.mongo?.db;
+    if (!db) return reply.code(500).send({ error: 'Internal Server Error', message: 'Database unavailable' });
+
+    const messagesCol = db.collection('employee_messages');
+    const history = await messagesCol.find({ conversationId: id }).sort({ timestamp: 1 }).limit(150).toArray();
+
+    return reply.send({
+      messages: history.map((msg) => ({
+        id: String(msg._id),
+        from: msg.senderUid === 'concierge-uid' ? 'concierge' : 'user',
+        content: msg.content,
+        timestamp: toIso(msg.timestamp),
+      })),
+    });
+  });
 }
 

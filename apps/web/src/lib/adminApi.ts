@@ -174,3 +174,27 @@ export async function markAllAdminNotificationsRead() {
     method: 'POST',
   });
 }
+
+export interface AdminConversationApi {
+  id: string;
+  employeeUid: string;
+  candidateName: string;
+  candidateEmail: string;
+  lastMessage: string;
+  updatedAt: string | null;
+}
+
+export interface AdminMessageApi {
+  id: string;
+  from: 'user' | 'concierge';
+  content: string;
+  timestamp: string | null;
+}
+
+export async function getAdminConversations() {
+  return request<{ conversations: AdminConversationApi[] }>('/api/admin/conversations');
+}
+
+export async function getAdminConversationMessages(convoId: string) {
+  return request<{ messages: AdminMessageApi[] }>(`/api/admin/conversations/${convoId}/messages`);
+}

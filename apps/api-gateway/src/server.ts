@@ -67,6 +67,7 @@ async function buildApp() {
 
   // Active websocket connections map: userId -> Socket[]
   const activeClients = new Map<string, any[]>();
+  const activeAdmins = new Set<string>();
 
   // --- MongoDB Change Stream for Live Notifications ---
   app.ready(async () => {
@@ -153,6 +154,9 @@ async function buildApp() {
         activeClients.set(uid, []);
       }
       activeClients.get(uid)!.push(connection.socket);
+      if (role === 'ADMIN') {
+        activeAdmins.add(uid);
+      }
       app.log.info(`WebSocket connected for user ${uid} (${role})`);
 
       connection.socket.on('close', () => {
@@ -163,6 +167,9 @@ async function buildApp() {
         }
         if (list.length === 0) {
           activeClients.delete(uid);
+          if (role === 'ADMIN') {
+            activeAdmins.delete(uid);
+          }
         }
         app.log.info(`WebSocket disconnected for user ${uid}`);
       });
@@ -214,46 +221,124 @@ async function buildApp() {
               }
             };
 
+            // Send to candidate client
             activeClients.get(uid)?.forEach(sock => {
               if (sock.readyState === 1) {
                 sock.send(JSON.stringify(userMsgPayload));
               }
             });
 
-            setTimeout(async () => {
-              const botResponses = [
-                `Hi there! Thanks for reaching out. I'm currently reviewing your profile and matches to ensure you're positioned perfectly for top roles.`,
-                `Hello! HireMeBharat's premium platform matches professionals with elite teams. Let's schedule an intro call soon!`,
-                `Got it! I am indexing fresh positions fitting your skills and desired CTC bounds. I will share highlights directly.`
-              ];
-              const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
-              const botNow = new Date();
-
-              const insertedBotMsg = await messagesCol.insertOne({
-                conversationId: String(convo!._id),
-                senderUid: 'concierge-uid',
-                content: randomResponse,
-                timestamp: botNow,
-              });
-
-              await conversations.updateOne({ _id: convo!._id }, { $set: { updatedAt: botNow, lastMessage: randomResponse } });
-
-              const botMsgPayload = {
-                type: 'concierge_message',
-                message: {
-                  id: String(insertedBotMsg.insertedId),
-                  from: 'concierge',
-                  content: randomResponse,
-                  timestamp: botNow.toISOString(),
-                }
-              };
-
-              activeClients.get(uid)?.forEach(sock => {
+            // Broadcast to all active admins
+            activeAdmins.forEach(adminUid => {
+              activeClients.get(adminUid)?.forEach(sock => {
                 if (sock.readyState === 1) {
-                  sock.send(JSON.stringify(botMsgPayload));
+                  sock.send(JSON.stringify({
+                    type: 'concierge_message',
+                    employeeUid: uid,
+                    message: {
+                      id: String(insertedUserMsg.insertedId),
+                      from: 'user',
+                      content: content,
+                      timestamp: now.toISOString(),
+                    }
+                  }));
                 }
               });
-            }, 1500);
+            });
+
+            // Trigger AI Copilot response ONLY if no live super admin is online
+            if (activeAdmins.size === 0) {
+              setTimeout(async () => {
+                const botResponses = [
+                  `Hi there! Thanks for reaching out. I'm currently reviewing your profile and matches to ensure you're positioned perfectly for top roles.`,
+                  `Hello! HireMeBharat's premium platform matches professionals with elite teams. Let's schedule an intro call soon!`,
+                  `Got it! I am indexing fresh positions fitting your skills and desired CTC bounds. I will share highlights directly.`
+                ];
+                const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
+                const botNow = new Date();
+
+                const insertedBotMsg = await messagesCol.insertOne({
+                  conversationId: String(convo!._id),
+                  senderUid: 'concierge-uid',
+                  content: randomResponse,
+                  timestamp: botNow,
+                });
+
+                await conversations.updateOne({ _id: convo!._id }, { $set: { updatedAt: botNow, lastMessage: randomResponse } });
+
+                const botMsgPayload = {
+                  type: 'concierge_message',
+                  message: {
+                    id: String(insertedBotMsg.insertedId),
+                    from: 'concierge',
+                    content: randomResponse,
+                    timestamp: botNow.toISOString(),
+                  }
+                };
+
+                activeClients.get(uid)?.forEach(sock => {
+                  if (sock.readyState === 1) {
+                    sock.send(JSON.stringify(botMsgPayload));
+                  }
+                });
+              }, 1500);
+            }
+          }
+
+          if (data.type === 'admin_concierge_response') {
+            const { employeeUid, content } = data;
+            if (!employeeUid || !content || !content.trim()) return;
+
+            const conversations = db.collection('employee_conversations');
+            const messagesCol = db.collection('employee_messages');
+            const now = new Date();
+
+            let convo = await conversations.findOne({ employeeUid });
+            if (!convo) return;
+
+            const insertedBotMsg = await messagesCol.insertOne({
+              conversationId: String(convo._id),
+              senderUid: 'concierge-uid',
+              content: content,
+              timestamp: now,
+            });
+
+            await conversations.updateOne({ _id: convo._id }, { $set: { updatedAt: now, lastMessage: content } });
+
+            const botMsgPayload = {
+              type: 'concierge_message',
+              message: {
+                id: String(insertedBotMsg.insertedId),
+                from: 'concierge',
+                content: content,
+                timestamp: now.toISOString(),
+              }
+            };
+
+            // Send to candidate
+            activeClients.get(employeeUid)?.forEach(sock => {
+              if (sock.readyState === 1) {
+                sock.send(JSON.stringify(botMsgPayload));
+              }
+            });
+
+            // Broadcast sync to other active admins
+            activeAdmins.forEach(adminUid => {
+              activeClients.get(adminUid)?.forEach(sock => {
+                if (sock.readyState === 1) {
+                  sock.send(JSON.stringify({
+                    type: 'admin_concierge_sync',
+                    employeeUid,
+                    message: {
+                      id: String(insertedBotMsg.insertedId),
+                      from: 'concierge',
+                      content: content,
+                      timestamp: now.toISOString(),
+                    }
+                  }));
+                }
+              });
+            });
           }
 
           if (data.type === 'chat_message') {

@@ -127,3 +127,212 @@
   }
 }
 
+/* ===== Admin Support Desk Styles ===== */
+.admin-support-layout {
+  display: flex;
+  height: 600px;
+  background: var(--color-surface-container);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.admin-support-sidebar {
+  width: 280px;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.admin-support-sidebar-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-support-convo-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.admin-support-convo-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.admin-support-convo-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-support-convo-item.active {
+  background: rgba(167, 139, 250, 0.08);
+  border-left: 3px solid #a78bfa;
+}
+
+.admin-support-convo-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(167, 139, 250, 0.1);
+  color: #a78bfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.admin-support-convo-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-support-convo-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.admin-support-convo-preview {
+  font-size: 12px;
+  color: var(--color-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.admin-support-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.admin-support-chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.admin-support-chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.admin-support-msg-bubble {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.admin-support-msg-bubble.sent {
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2) 0%, rgba(167, 139, 250, 0.1) 100%);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  color: var(--color-secondary);
+  align-self: flex-end;
+  border-bottom-right-radius: 0;
+}
+
+.admin-support-msg-bubble.received {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--color-on-surface);
+  align-self: flex-start;
+  border-bottom-left-radius: 0;
+}
+
+.admin-support-msg-time {
+  font-size: 10px;
+  color: var(--color-on-surface-variant);
+  margin-top: 4px;
+}
+
+.admin-support-input-bar {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.01);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-support-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  color: var(--color-on-surface);
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition-base);
+}
+
+.admin-support-input:focus {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-support-send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+  border: none;
+  color: #12121e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.admin-support-send-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0 12px rgba(167, 139, 250, 0.4);
+}
+
+.admin-support-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-support-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-on-surface-variant);
+  opacity: 0.8;
+}
+
+

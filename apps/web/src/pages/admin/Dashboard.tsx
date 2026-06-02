@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import { useWebSocket } from '../../contexts/WebSocketContext';
 import {
   getAdminAnalytics,
   getAdminEscalations,
@@ -9,6 +10,10 @@ import {
   getAdminUsers,
   patchAdminEscalation,
   patchAdminUser,
+  getAdminConversations,
+  getAdminConversationMessages,
+  type AdminConversationApi,
+  type AdminMessageApi,
   type AdminEscalationApi,
   type AdminEscalationPriority,
   type AdminEscalationStatus,
@@ -27,6 +32,7 @@ import './Admin.css';
 const navItems = [
   { icon: 'home', label: 'Home', path: '/admin' },
   { icon: 'group', label: 'Users', path: '/admin/users' },
+  { icon: 'support_agent', label: 'Support Desk', path: '/admin/support' },
   { icon: 'assignment', label: 'Job Portal', path: '/admin/job-portal' },
   { icon: 'flag', label: 'Escalations', path: '/admin/escalations', badge: 4 },
   { icon: 'analytics', label: 'Analytics', path: '/admin/analytics' },
@@ -723,6 +729,220 @@ function JobPortalPage() {
   );
 }
 
+function SupportDeskPage() {
+  const ws = useWebSocket();
+  const [conversations, setConversations] = useState<AdminConversationApi[]>([]);
+  const [selectedConvo, setSelectedConvo] = useState<AdminConversationApi | null>(null);
+  const [messages, setMessages] = useState<AdminMessageApi[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const loadConvos = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await getAdminConversations();
+      setConversations(res.conversations || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load conversations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadConvos();
+  }, []);
+
+  // Subscribe to live WebSocket messages for real-time candidate concierge chats
+  useEffect(() => {
+    if (!ws) return;
+    
+    const unsubConvo = ws.subscribe('concierge_message', (payload: any) => {
+      const { employeeUid, message } = payload;
+      if (!message || !employeeUid) return;
+
+      // Update message history if it's the currently selected conversation
+      if (selectedConvo && selectedConvo.employeeUid === employeeUid) {
+        setMessages((prev) => [...prev, message]);
+      }
+
+      // Refresh last message in sidebar conversations list
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.employeeUid === employeeUid) {
+            return { ...c, lastMessage: message.content };
+          }
+          return c;
+        })
+      );
+    });
+
+    const unsubSync = ws.subscribe('admin_concierge_sync' as any, (payload: any) => {
+      const { employeeUid, message } = payload;
+      if (!message || !employeeUid) return;
+
+      // Sync active conversation
+      if (selectedConvo && selectedConvo.employeeUid === employeeUid) {
+        setMessages((prev) => [...prev, message]);
+      }
+
+      // Sync conversation preview in sidebar list
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.employeeUid === employeeUid) {
+            return { ...c, lastMessage: message.content };
+          }
+          return c;
+        })
+      );
+    });
+
+    return () => {
+      unsubConvo();
+      unsubSync();
+    };
+  }, [ws, selectedConvo]);
+
+  const selectConvo = async (convo: AdminConversationApi) => {
+    setSelectedConvo(convo);
+    setMessages([]);
+    try {
+      const res = await getAdminConversationMessages(convo.id);
+      setMessages(res.messages || []);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load messages');
+    }
+  };
+
+  const handleSend = () => {
+    if (!newMessage.trim() || !selectedConvo) return;
+    ws.send({
+      type: 'admin_concierge_response',
+      employeeUid: selectedConvo.employeeUid,
+      content: newMessage.trim(),
+    });
+    setNewMessage('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="admin-support-layout">
+      {/* Conversations Sidebar */}
+      <div className="admin-support-sidebar">
+        <div className="admin-support-sidebar-header">
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Active Candidates</h3>
+          {ws.connected && <span className="empr-ws-status connected">Live Desk</span>}
+          {!ws.connected && <span className="empr-ws-status disconnected">Offline</span>}
+        </div>
+
+        <div className="admin-support-convo-list">
+          {loading && <p style={{ padding: 20, color: 'var(--color-on-surface-variant)', fontSize: 13 }}>Loading chat threads...</p>}
+          {error && <p style={{ padding: 20, color: 'var(--color-error)', fontSize: 13 }}>{error}</p>}
+          {!loading && !error && conversations.length === 0 && (
+            <p style={{ padding: 20, color: 'var(--color-on-surface-variant)', fontSize: 13, textAlign: 'center' }}>No active concierge conversations.</p>
+          )}
+          {!loading &&
+            !error &&
+            conversations.map((c) => (
+              <button
+                key={c.id}
+                className={`admin-support-convo-item ${selectedConvo?.id === c.id ? 'active' : ''}`}
+                onClick={() => selectConvo(c)}
+              >
+                <div className="admin-support-convo-avatar">
+                  {(c.candidateName || 'C')[0].toUpperCase()}
+                </div>
+                <div className="admin-support-convo-info">
+                  <span className="admin-support-convo-name">{c.candidateName}</span>
+                  <p className="admin-support-convo-preview">{c.lastMessage || 'No messages yet'}</p>
+                </div>
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {/* Conversations Chat Area */}
+      <div className="admin-support-chat">
+        {!selectedConvo ? (
+          <div className="admin-support-empty">
+            <span className="material-symbols-outlined" style={{ fontSize: 48, opacity: 0.5, color: '#a78bfa' }}>support_agent</span>
+            <h3 style={{ marginTop: 12, fontSize: 16 }}>Concierge Support Desk</h3>
+            <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)', textAlign: 'center', marginTop: 4, padding: '0 24px' }}>
+              Select a candidate from the left panel to engage in live support, answer queries, or offer advice.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="admin-support-chat-header">
+              <div className="admin-support-convo-avatar" style={{ width: 40, height: 40 }}>
+                {(selectedConvo.candidateName || 'C')[0].toUpperCase()}
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontWeight: 600, fontSize: 15, margin: 0 }}>{selectedConvo.candidateName}</p>
+                <p style={{ fontSize: 11, color: 'var(--color-on-surface-variant)', margin: '2px 0 0 0' }}>
+                  Email: {selectedConvo.candidateEmail}
+                </p>
+              </div>
+            </div>
+
+            {/* Messages Body */}
+            <div className="admin-support-chat-body">
+              {messages.map((msg, idx) => {
+                const isSentByAdmin = msg.from === 'concierge';
+                return (
+                  <div
+                    key={msg.id || idx}
+                    className={`admin-support-msg-bubble ${isSentByAdmin ? 'sent' : 'received'}`}
+                  >
+                    <div>{msg.content}</div>
+                    <div className="admin-support-msg-time" style={{ textAlign: isSentByAdmin ? 'right' : 'left' }}>
+                      {isSentByAdmin ? 'Concierge (Sarah)' : selectedConvo.candidateName} · {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Bar */}
+            <div className="admin-support-input-bar">
+              <input
+                className="admin-support-input"
+                placeholder="Type a message as Sarah Jenkins..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={handleKeyPress}
+              />
+              <button
+                className="admin-support-send-btn"
+                onClick={handleSend}
+                disabled={!newMessage.trim()}
+              >
+                <span className="material-symbols-outlined">send</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ComingSoon({ title }: { title: string }) {
   return (
     <div className="dash-card dash-card-padded">
@@ -784,6 +1004,7 @@ export default function Dashboard() {
       <Routes>
         <Route index element={<AdminFeed summary={summary} escalations={escalationsPreview} />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="support" element={<SupportDeskPage />} />
         <Route path="escalations" element={<EscalationsPage />} />
         <Route path="job-portal" element={<JobPortalPage />} />
         <Route path="analytics" element={<ComingSoon title="Analytics" />} />
