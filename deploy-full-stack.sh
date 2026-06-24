@@ -40,10 +40,12 @@ docker container prune -f || true
 docker volume prune -f || true
 
 if [ -n "${COMPOSE_TARGETS}" ]; then
-  # shellcheck disable=SC2086
-  docker compose -f docker-compose.prod.yml pull ${COMPOSE_TARGETS}
-  # shellcheck disable=SC2086
-  docker compose -f docker-compose.prod.yml up -d ${COMPOSE_TARGETS}
+  for svc in ${APP_SERVICES}; do
+    echo "Pulling and starting ${svc}..."
+    docker compose -f docker-compose.prod.yml pull "${svc}"
+    docker compose -f docker-compose.prod.yml up -d "${svc}"
+    docker image prune -af || true
+  done
 else
   docker compose -f docker-compose.prod.yml pull
   docker compose -f docker-compose.prod.yml up -d
