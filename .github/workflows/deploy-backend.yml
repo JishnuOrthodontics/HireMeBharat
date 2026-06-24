@@ -131,9 +131,10 @@ jobs:
           command_timeout: 15m
           envs: BOOTSTRAP_B64,SCRIPT_B64,CLEANUP_MODE,KEEP_REGISTRY_TAGS
           script: |
-            set -u
+            set +e
             printf '%s' "$BOOTSTRAP_B64" | base64 -d | bash -s
             printf '%s' "$SCRIPT_B64" | base64 -d | bash -s
+            df -h /
 
       - name: Build and push Docker image
         if: steps.changes.outputs.service-changed == 'true'
@@ -256,9 +257,10 @@ jobs:
           command_timeout: 15m
           envs: BOOTSTRAP_B64,SCRIPT_B64,CLEANUP_MODE,KEEP_REGISTRY_TAGS
           script: |
-            set -u
+            set +e
             printf '%s' "$BOOTSTRAP_B64" | base64 -d | bash -s
             printf '%s' "$SCRIPT_B64" | base64 -d | bash -s
+            df -h /
 
       - name: Prepare configuration files
         env:

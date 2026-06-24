@@ -52,8 +52,7 @@ jobs:
           command_timeout: 15m
           envs: BOOTSTRAP_B64,SCRIPT_B64,CLEANUP_MODE,KEEP_REGISTRY_TAGS
           script: |
-            set -u
-            echo "=== Phase 1: emergency bootstrap (no file writes) ==="
+            set +e
             printf '%s' "$BOOTSTRAP_B64" | base64 -d | bash -s
-            echo "=== Phase 2: full cleanup (streamed to bash, no SCP) ==="
             printf '%s' "$SCRIPT_B64" | base64 -d | bash -s
+            df -h /
