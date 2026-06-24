@@ -579,10 +579,28 @@
 }
 
 .jobs-page-header {
+  margin-bottom: 20px;
+}
+
+.jobs-page-header-main {
+  width: 100%;
+}
+
+.jobs-page-header-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.jobs-page-header-title-row h2 {
+  margin: 0;
+}
+
+.jobs-page-header-title-row > .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .jobs-page-header h2 {

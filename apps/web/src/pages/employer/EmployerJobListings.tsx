@@ -49,7 +49,15 @@ export default function EmployerJobListings() {
       setListings(listingsRes.listings || []);
       if (statusRes) setBillingStatus(statusRes);
     } catch (err: any) {
-      setError(err.message || 'Failed to load data');
+      const raw = err.message || 'Failed to load data';
+      const isJobsUnavailable =
+        /503|502|504|unavailable|ECONNREFUSED/i.test(raw) ||
+        raw.includes('Request failed (503)');
+      setError(
+        isJobsUnavailable
+          ? 'Job listings service is temporarily unavailable. The jobs API may still be starting—refresh in a minute or contact support if this persists.'
+          : raw
+      );
     } finally {
       setLoading(false);
     }
@@ -190,19 +198,21 @@ export default function EmployerJobListings() {
   return (
     <div className="jobs-listing-manage">
       <div className="jobs-page-header">
-        <div>
-          <h2>
-            <span className="material-symbols-outlined" style={{ fontSize: 24, marginRight: 8, verticalAlign: -4, color: 'var(--color-secondary)' }}>work_outline</span>
-            Manage Job Listings
-          </h2>
+        <div className="jobs-page-header-main">
+          <div className="jobs-page-header-title-row">
+            <h2>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, marginRight: 8, verticalAlign: -4, color: 'var(--color-secondary)' }}>work_outline</span>
+              Manage Job Listings
+            </h2>
+            <button className="btn btn-gold" onClick={handleOpenCreateModal}>
+              <span className="material-symbols-outlined">add</span>
+              New Job Listing
+            </button>
+          </div>
           <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)', marginTop: 4 }}>
             Create and moderate your public-facing job board listings.
           </p>
         </div>
-        <button className="btn btn-gold" onClick={handleOpenCreateModal}>
-          <span className="material-symbols-outlined">add</span>
-          New Job Listing
-        </button>
       </div>
 
       {billingStatus && billingStatus.plan !== 'PRO' && (
