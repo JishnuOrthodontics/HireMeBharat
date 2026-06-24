@@ -338,9 +338,9 @@ jobs:
           script: |
             set -e
             for i in $(seq 1 45); do
-              if curl -sfS --max-time 5 http://127.0.0.1:3001/api/health > /tmp/h.json; then
-                echo "Health OK:"
-                cat /tmp/h.json
+              if curl -sfS --max-time 5 http://127.0.0.1:3001/api/health; then
+                echo ""
+                echo "Health OK"
                 exit 0
               fi
               echo "waiting for gateway ($i)..."
