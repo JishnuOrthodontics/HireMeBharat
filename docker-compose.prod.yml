@@ -21,6 +21,7 @@ services:
       - UPSTREAM_EMPLOYER=http://api-employer:3004
       - UPSTREAM_ADMIN=http://api-admin:3005
       - UPSTREAM_JOBS=http://api-jobs:3006
+      - UPSTREAM_BILLING=http://api-billing:3007
     restart: unless-stopped
 
   # Auth Service (handles public routes)
@@ -82,6 +83,19 @@ services:
       - .env
     environment:
       - PORT=3006
+      - HOST=0.0.0.0
+      - NODE_ENV=production
+      - FRONTEND_URL=https://hiremebharat.com
+      - MONGODB_DB=hiremebharat
+    restart: unless-stopped
+
+  # Billing Service (subscriptions, job packs, unlock credits)
+  api-billing:
+    image: localhost:5000/hiremebharat-api-billing:latest
+    env_file:
+      - .env
+    environment:
+      - PORT=3007
       - HOST=0.0.0.0
       - NODE_ENV=production
       - FRONTEND_URL=https://hiremebharat.com

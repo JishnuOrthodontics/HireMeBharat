@@ -9,6 +9,7 @@ on:
       - 'apps/api-employee/**'
       - 'apps/api-employer/**'
       - 'apps/api-admin/**'
+      - 'apps/api-billing/**'
       - 'packages/backend-core/**'
       - 'scripts/ci/**'
       - '.github/workflows/deploy-backend.yml'
@@ -54,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [api-gateway, api-auth, api-employee, api-employer, api-admin]
+        service: [api-gateway, api-auth, api-employee, api-employer, api-admin, api-billing]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -285,7 +286,7 @@ jobs:
       - name: Build and push all services
         run: |
           set -e
-          for svc in api-gateway api-auth api-employee api-employer api-admin; do
+          for svc in api-gateway api-auth api-employee api-employer api-admin api-billing; do
             docker buildx build \
               --push \
               --file "apps/${svc}/Dockerfile" \
