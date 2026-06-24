@@ -269,6 +269,30 @@
   opacity: 0;
 }
 
+.about-management-section {
+  margin-bottom: 80px;
+}
+
+.management-story {
+  margin-top: 40px;
+  padding: 32px 36px;
+  border-radius: var(--border-radius-lg);
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+}
+
+.management-story-lead {
+  color: var(--color-on-surface);
+  font-size: 17px;
+}
+
+.management-story strong {
+  color: var(--color-on-surface);
+  font-weight: 600;
+}
+
 .team-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -320,5 +344,8 @@
   }
   .team-card {
     padding: 24px;
+  }
+  .management-story {
+    padding: 24px 20px;
   }
 }

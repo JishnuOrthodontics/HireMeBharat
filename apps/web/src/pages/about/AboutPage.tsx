@@ -154,42 +154,102 @@ export default function AboutPage() {
           </div>
         </section>
 
-        {/* ===== LEADERSHIP ===== */}
-        <section className="about-team-section">
+        {/* ===== MANAGEMENT ===== */}
+        <section className="about-team-section about-management-section">
           <div className="section-header">
             <span className="section-badge chip-gold">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>groups</span>
-              The Creators
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>corporate_fare</span>
+              Our Management
             </span>
-            <h2 className="text-h1">The minds behind <span className="text-gradient-gold">HireMeBharat</span></h2>
-            <p className="text-body-lg section-subtitle" style={{ maxWidth: 500, margin: '8px auto 0' }}>
-              A harmony of industry recruiters and artificial intelligence architects.
+            <h2 className="text-h1">Leadership at <span className="text-gradient-gold">SYMA</span></h2>
+            <p className="text-body-lg section-subtitle" style={{ maxWidth: 640, margin: '8px auto 0' }}>
+              A family legacy in handicrafts, strengthened by professional HR and legal excellence.
+            </p>
+          </div>
+
+          <div className="management-story glass-card">
+            <p className="text-body-md management-story-lead">
+              Mr. Syam Prasad G., an MBA graduate and son of Mr. Gangadharan, carries forward a lifetime of handicraft mastery.
+              Mr. Gangadharan&apos;s experience in handicrafts is invaluable—he has spent his whole life nurturing this art form.
+              Not only his sons, but many artisans trained under him have grown into self-entrepreneurs in this field.
+            </p>
+            <p className="text-body-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: 16 }}>
+              As a deep respect to his knowledge and to preserve it forever, Mr. Syam Prasad, along with his wife Adv. Maliny Syam,
+              started <strong>SYMA Handicrafts &amp; Handlooms</strong>. It has been a family business for years, and both endeavour to
+              reach new heights under the brand <strong>SYMA</strong>. Mr. Syam Prasad has been in the handicrafts business since he was
+              15 years old and is a registered artisan under the Office of the Development Commissioner (Handicrafts), Government of India.
+              With decades of corporate management experience, he brings professionalism to every attribute of the business.
+              Adv. Maliny Syam—HR professional and advocate—stands beside him as partner in business and in vision.
+            </p>
+            <p className="text-body-md" style={{ color: 'var(--color-on-surface-variant)', marginTop: 16 }}>
+              Through <strong>SYMA HR Services</strong>, the organization delivers perfection across every aspect of the HR domain.
+              Legal proficiency ensures counsel at its best. Together, management and team do their best—and deliver the best.
+              HireMeBharat extends that same commitment to elite talent and career curation across Bharat.
             </p>
           </div>
 
           <div className="team-grid">
             {[
               {
-                name: 'Dr. Jishnu S.',
-                role: 'Founder & Chief Architect',
-                bio: 'Passionate about redefining premium executive concierge workflows. Combines executive recruiting wisdom with modern technological innovation.',
+                name: 'Mr. Syam Prasad G.',
+                role: 'Founder & Managing Partner',
+                bio: 'MBA graduate and registered artisan (Government of India). In handicrafts since age 15, with decades of corporate management experience shaping every facet of SYMA Handicrafts & Handlooms.',
                 avatarColor: 'var(--color-primary-gradient-start)',
-                initial: 'J'
+                initial: 'SP',
               },
               {
-                name: 'Sarah Jenkins',
-                role: 'Head of Talent Concierge Services',
-                bio: '15+ years managing high-level recruitments and executive transitions for leading companies across India and Southeast Asia.',
+                name: 'Adv. Maliny Syam',
+                role: 'Co-Founder · HR & Legal Lead',
+                bio: 'Advocate with MBA (HR), M.Sc. (Psychology), and LLB. Pioneer in building complete HR domains; ex-ITC and ex-Robert Bosch/MICO. Leads SYMA HR Services and legal excellence.',
                 avatarColor: 'var(--color-secondary-gradient-start)',
-                initial: 'S'
+                initial: 'MS',
+              },
+            ].map((member, idx) => (
+              <div key={idx} className="team-card glass-card glass-card-hover">
+                <div className="team-card-inner">
+                  <div className="team-avatar" style={{ background: member.avatarColor }}>
+                    {member.initial}
+                  </div>
+                  <h3 className="text-h3" style={{ marginTop: 20 }}>{member.name}</h3>
+                  <p className="team-role text-gradient-gold">{member.role}</p>
+                  <p className="team-bio text-body-sm" style={{ color: 'var(--color-on-surface-variant)', marginTop: 12 }}>
+                    {member.bio}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== OUR TEAM ===== */}
+        <section className="about-team-section">
+          <div className="section-header">
+            <span className="section-badge chip-emerald">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>groups</span>
+              Our Team
+            </span>
+            <h2 className="text-h1">The people who <span className="text-gradient-emerald">deliver</span></h2>
+            <p className="text-body-lg section-subtitle" style={{ maxWidth: 520, margin: '8px auto 0' }}>
+              Dedicated specialists across retail, finance, and customer experience.
+            </p>
+          </div>
+
+          <div className="team-grid">
+            {[
+              {
+                name: 'Mr. P.V. Mohan',
+                role: 'Business & Artwork Guide',
+                bio: 'With immense knowledge and experience in business and artwork, the guiding force behind SYMA Handicrafts & Handlooms. His commitment to SYMA is commendable—customers find the right product in stores headed by his leadership.',
+                avatarColor: '#a78bfa',
+                initial: 'PM',
               },
               {
-                name: 'Anirudh Roy',
-                role: 'Director of AI Engineering',
-                bio: 'Architected our 200-parameter semantic matching engine. Specialized in deep learning, semantic parsing, and cultural alignment networks.',
-                avatarColor: '#a78bfa',
-                initial: 'A'
-              }
+                name: 'Mr. Madhan Kumar M.',
+                role: 'Head, SYMA Accounting Services',
+                bio: 'Accounting and finance are the backbone of any organization. Budgeting and managing cash flow decide survival and future growth. His unmatched accounting skills and broad experience fulfill diverse client needs.',
+                avatarColor: '#38bdf8',
+                initial: 'MK',
+              },
             ].map((member, idx) => (
               <div key={idx} className="team-card glass-card glass-card-hover">
                 <div className="team-card-inner">
