@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 const checkoutSchema = z.object({
   type: z.enum(['SUBSCRIPTION', 'CREDITS', 'FEATURED_JOB', 'JOB_PACK']),
   plan: z.enum(['PRO', 'PREMIUM']).optional(),
-  cycle: z.enum(['monthly', 'yearly']).optional(),
+  cycle: z.enum(['monthly', 'yearly', 'six_month', 'one_year']).optional(),
   creditsAmount: z.number().int().min(1).max(100).optional(),
   employerPlanId: z.enum(['1M', '3M', '6M']).optional(),
   jobId: z.string().optional(),
@@ -29,6 +29,27 @@ function toIso(value: unknown): string | null {
   if (value instanceof Date) return value.toISOString();
   const d = new Date(String(value));
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function subscriptionExpiresAt(now: Date, cycle: string): Date {
+  const expiresAt = new Date(now);
+  if (cycle === 'yearly' || cycle === 'one_year') {
+    expiresAt.setFullYear(now.getFullYear() + 1);
+  } else if (cycle === 'six_month') {
+    expiresAt.setMonth(now.getMonth() + 6);
+  } else {
+    expiresAt.setMonth(now.getMonth() + 1);
+  }
+  return expiresAt;
+}
+
+function subscriptionAmountInr(plan: 'PRO' | 'PREMIUM', cycle: string): number {
+  if (plan === 'PRO') {
+    return cycle === 'yearly' ? 71988 : 7999;
+  }
+  if (cycle === 'six_month') return 649;
+  if (cycle === 'one_year' || cycle === 'yearly') return 899;
+  return cycle === 'yearly' ? 11988 : 1499;
 }
 
 export async function billingRoutes(app: FastifyInstance) {
@@ -280,12 +301,7 @@ export async function billingRoutes(app: FastifyInstance) {
     }
 
     if (type === 'SUBSCRIPTION') {
-      const expiresAt = new Date();
-      if (cycle === 'yearly') {
-        expiresAt.setFullYear(now.getFullYear() + 1);
-      } else {
-        expiresAt.setMonth(now.getMonth() + 1);
-      }
+      const expiresAt = subscriptionExpiresAt(now, cycle || 'monthly');
 
       // Upsert billing subscription
       await db.collection('billing_subscriptions').updateOne(
@@ -303,12 +319,12 @@ export async function billingRoutes(app: FastifyInstance) {
       );
 
       // Create transaction log
-      const price = plan === 'PRO' ? (cycle === 'yearly' ? 950 : 99) : (cycle === 'yearly' ? 180 : 19);
+      const price = subscriptionAmountInr(plan!, cycle || 'monthly');
       await db.collection('billing_transactions').insertOne({
         userUid: uid,
         type: 'SUBSCRIPTION',
         amount: price,
-        currency: 'USD',
+        currency: 'INR',
         description: `Simulated Checkout: ${plan} Plan (${cycle})`,
         status: 'SUCCESS',
         createdAt: now,
@@ -429,12 +445,7 @@ export async function billingRoutes(app: FastifyInstance) {
       if (uid && type === 'SUBSCRIPTION') {
         const plan = metadata.plan;
         const cycle = metadata.cycle || 'monthly';
-        const expiresAt = new Date();
-        if (cycle === 'yearly') {
-          expiresAt.setFullYear(now.getFullYear() + 1);
-        } else {
-          expiresAt.setMonth(now.getMonth() + 1);
-        }
+        const expiresAt = subscriptionExpiresAt(now, cycle);
 
         await db.collection('billing_subscriptions').updateOne(
           { userUid: uid },

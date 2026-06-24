@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
 import EmployerPricingPlans from '../../components/pricing/EmployerPricingPlans';
+import EmployeePricingPlans from '../../components/pricing/EmployeePricingPlans';
 import type { EmployerJobPackId } from '../../lib/employerPlans';
+import { getEmployeePremiumPlan, type EmployeePremiumPlanId } from '../../lib/employeePlans';
 import * as billingApi from '../../lib/billingApi';
 import './Pricing.css';
+
+function employeePlanIdFromCycle(cycle: string | null | undefined): EmployeePremiumPlanId | null {
+  if (cycle === 'six_month') return '6M';
+  if (cycle === 'one_year' || cycle === 'yearly') return '1Y';
+  return null;
+}
 
 export default function Pricing() {
   const { userProfile } = useAuth();
@@ -12,28 +20,24 @@ export default function Pricing() {
   const rawRole = userProfile?.role || 'EMPLOYEE';
   const isEmployer = rawRole === 'EMPLOYER';
 
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [sandboxModal, setSandboxModal] = useState<{
     open: boolean;
     payload: billingApi.CheckoutPayload | null;
   }>({ open: false, payload: null });
 
-  // 1. Fetch current status
   const { data: status, isLoading } = useQuery({
     queryKey: ['billing', 'status'],
     queryFn: billingApi.getBillingStatus,
   });
 
-  // 2. Checkout mutation
   const checkoutMutation = useMutation({
     mutationFn: billingApi.createCheckoutSession,
     onSuccess: (res) => {
       if (res.mode === 'sandbox') {
-        // Trigger simulated checkout modal
         const parsedUrl = new URL(res.checkoutUrl);
-        const type = parsedUrl.searchParams.get('type') as any;
-        const plan = parsedUrl.searchParams.get('plan') as any;
-        const cycle = parsedUrl.searchParams.get('cycle') as any;
+        const type = parsedUrl.searchParams.get('type') as billingApi.CheckoutPayload['type'];
+        const plan = parsedUrl.searchParams.get('plan') as billingApi.CheckoutPayload['plan'];
+        const cycle = parsedUrl.searchParams.get('cycle') as billingApi.CheckoutPayload['cycle'];
         const credits = parsedUrl.searchParams.get('credits') ? parseInt(parsedUrl.searchParams.get('credits')!, 10) : undefined;
         const jobId = parsedUrl.searchParams.get('jobId') || undefined;
         const employerPlanId = (parsedUrl.searchParams.get('pack') || undefined) as EmployerJobPackId | undefined;
@@ -43,19 +47,16 @@ export default function Pricing() {
           payload: { type, plan, cycle, creditsAmount: credits, jobId, employerPlanId },
         });
       } else {
-        // Redirect to Stripe checkout page
         window.location.href = res.checkoutUrl;
       }
     },
   });
 
-  // 3. Sandbox Simulation Mutation
   const sandboxMutation = useMutation({
     mutationFn: billingApi.simulateSandboxCheckout,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing', 'status'] });
       queryClient.invalidateQueries({ queryKey: ['billing', 'history'] });
-      // Invalidate summaries
       if (isEmployer) {
         queryClient.invalidateQueries({ queryKey: ['employer', 'dashboardSummary'] });
       } else {
@@ -75,12 +76,16 @@ export default function Pricing() {
   }
 
   const activePlan = status?.plan || 'FREE';
+  const isPremiumActive = activePlan === 'PREMIUM';
+  const activePremiumPlan = isPremiumActive ? employeePlanIdFromCycle(status?.cycle) : null;
 
-  const handleSelectPlan = (planName: 'PRO' | 'PREMIUM') => {
+  const handleUpgradeEmployee = (planId: EmployeePremiumPlanId) => {
+    const pack = getEmployeePremiumPlan(planId);
+    if (!pack) return;
     checkoutMutation.mutate({
       type: 'SUBSCRIPTION',
-      plan: planName,
-      cycle: billingCycle,
+      plan: 'PREMIUM',
+      cycle: pack.billingCycle,
     });
   };
 
@@ -105,32 +110,15 @@ export default function Pricing() {
   };
 
   return (
-    <div className={`pricing-container animate-fade-in ${isEmployer ? 'pricing-container-employer' : ''}`}>
+    <div className={`pricing-container animate-fade-in ${isEmployer ? 'pricing-container-employer' : 'pricing-container-employee'}`}>
       <div className="pricing-header">
         <span className="pricing-kicker">Transparent Monetization</span>
         <h1 className="pricing-title">Find Your Perfect Plan</h1>
         <p className="pricing-subtitle">
           {isEmployer
             ? 'Choose a job credit pack—each credit publishes one role and keeps it active for 15 days.'
-            : 'Unlock high-performance tools, priority candidate pipelines, and automated AI assistance.'}
+            : 'Upgrade to Premium and increase your chances of getting shortlisted.'}
         </p>
-
-        {!isEmployer && (
-        <div className="cycle-toggle-wrap">
-          <button
-            className={`cycle-toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
-            onClick={() => setBillingCycle('monthly')}
-          >
-            Monthly
-          </button>
-          <button
-            className={`cycle-toggle-btn ${billingCycle === 'yearly' ? 'active' : ''}`}
-            onClick={() => setBillingCycle('yearly')}
-          >
-            Yearly <span className="save-badge">Save 20%</span>
-          </button>
-        </div>
-        )}
       </div>
 
       {isEmployer ? (
@@ -149,108 +137,21 @@ export default function Pricing() {
           />
         </>
       ) : (
-      <div className="pricing-grid">
-        {/* Tier 1: Free Tier */}
-        <div className="pricing-card glass-card">
-          <div className="card-header">
-            <h3 className="plan-name">Free Plan</h3>
-            <p className="plan-tagline">Essential platform entry to search and browse.</p>
-            <div className="plan-price">
-              <span className="currency">₹</span>
-              <span className="amount">0</span>
-              <span className="period">/mo</span>
-            </div>
-          </div>
-          <div className="plan-features">
-            <ul>
-              <li>
-                <span className="material-symbols-outlined check-icon">done</span>
-                Standard job search and applications
-              </li>
-              <li>
-                <span className="material-symbols-outlined check-icon">done</span>
-                Complete professional profile strength
-              </li>
-              <li>
-                <span className="material-symbols-outlined check-icon">done</span>
-                Standard email notifications
-              </li>
-              <li className="disabled">
-                <span className="material-symbols-outlined close-icon">close</span>
-                Premium profile search ranking boost
-              </li>
-              <li className="disabled">
-                <span className="material-symbols-outlined close-icon">close</span>
-                Advanced stats and insights
-              </li>
-            </ul>
-          </div>
-          <div className="card-action">
-            <button className="btn btn-ghost w-100" disabled={activePlan === 'FREE'}>
-              {activePlan === 'FREE' ? 'Current Plan' : 'Downgrade'}
-            </button>
-          </div>
-        </div>
-
-        {/* Candidate Premium */}
-          <div className="pricing-card glass-card premium-card">
-            <div className="premium-glow" />
-            <div className="popular-badge">High Recommendation</div>
-            <div className="card-header">
-              <h3 className="plan-name">Candidate Premium</h3>
-              <p className="plan-tagline">Double your matches and stand out instantly.</p>
-              <div className="plan-price">
-                <span className="currency">₹</span>
-                <span className="amount">{billingCycle === 'yearly' ? '999' : '1,499'}</span>
-                <span className="period">/mo</span>
-              </div>
-              {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹11,988/yr)</p>}
-            </div>
-            <div className="plan-features">
-              <ul>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  <strong>2x higher ranking in recruiter search results</strong>
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  <strong>Advanced salary comparison stats per match</strong>
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  Pulsing Gold Premium ring on avatar
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  Priority support responses
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  Sarah Jenkins prioritized advice sessions
-                </li>
-              </ul>
-            </div>
-            <div className="card-action">
-              <button
-                className="btn btn-primary w-100 btn-gold-gradient"
-                disabled={activePlan === 'PREMIUM'}
-                onClick={() => handleSelectPlan('PREMIUM')}
-              >
-                {activePlan === 'PREMIUM' ? 'Active Subscription' : 'Upgrade to Premium'}
-              </button>
-            </div>
-          </div>
-      </div>
+        <EmployeePricingPlans
+          onUpgrade={handleUpgradeEmployee}
+          buyBusy={checkoutMutation.isPending}
+          isPremiumActive={isPremiumActive}
+          activePremiumPlan={activePremiumPlan}
+        />
       )}
 
-      {/* Recruiter candidate unlock credits */}
       {isEmployer && (
         <div className="credits-monetization-card glass-card">
           <div className="credits-info">
             <span className="material-symbols-outlined credits-icon">database</span>
             <div>
               <h3>Purchase Candidate Unlock Credits</h3>
-              <p>Buy packs of credits to selectively unlock candidate contact details without committing to a Pro subscription.</p>
+              <p>Buy packs of credits to selectively unlock candidate contact details.</p>
             </div>
           </div>
           <div className="credits-actions">
@@ -260,7 +161,6 @@ export default function Pricing() {
         </div>
       )}
 
-      {/* Developer Sandbox Checkout Simulation Modal */}
       {sandboxModal.open && (
         <div className="sandbox-modal-backdrop">
           <div className="sandbox-modal glass-card animate-fade-in">

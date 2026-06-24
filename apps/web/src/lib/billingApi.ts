@@ -5,7 +5,7 @@ const request = authRequest;
 export interface BillingStatusApi {
   plan: 'FREE' | 'PRO' | 'PREMIUM';
   expiresAt: string | null;
-  cycle: 'monthly' | 'yearly' | null;
+  cycle: 'monthly' | 'yearly' | 'six_month' | 'one_year' | null;
   credits: number;
   jobCredits?: number;
   jobCreditsExpiresAt?: string | null;
@@ -26,7 +26,7 @@ export interface BillingTransactionApi {
 export interface CheckoutPayload {
   type: 'SUBSCRIPTION' | 'CREDITS' | 'FEATURED_JOB' | 'JOB_PACK';
   plan?: 'PRO' | 'PREMIUM';
-  cycle?: 'monthly' | 'yearly';
+  cycle?: 'monthly' | 'yearly' | 'six_month' | 'one_year';
   creditsAmount?: number;
   employerPlanId?: '1M' | '3M' | '6M';
   jobId?: string;

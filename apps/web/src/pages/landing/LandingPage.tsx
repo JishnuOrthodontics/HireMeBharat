@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EmployerPricingPlans from '../../components/pricing/EmployerPricingPlans';
+import EmployeePricingPlans from '../../components/pricing/EmployeePricingPlans';
 import './LandingPage.css';
 
 /* ============================================================
@@ -43,7 +44,6 @@ function AnimatedCounter({ end, suffix = '', duration = 2000 }: { end: number; s
    ============================================================ */
 export default function LandingPage() {
   const [pricingRole, setPricingRole] = useState<'employer' | 'employee'>('employer');
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   return (
     <div className="landing-page">
@@ -308,7 +308,7 @@ export default function LandingPage() {
             <p className="text-body-lg section-subtitle">
               {pricingRole === 'employer'
                 ? 'Job credit packs for every hiring timeline—post roles, stay visible, and scale when you grow.'
-                : 'Unlock advanced matching tools, high-priority pipelines, and concierge guidance.'}
+                : 'Compare Free vs Premium and get shortlisted faster with role fitment and priority visibility.'}
             </p>
           </div>
 
@@ -333,113 +333,7 @@ export default function LandingPage() {
           {pricingRole === 'employer' ? (
             <EmployerPricingPlans />
           ) : (
-            <>
-          {/* Billing Cycle Toggle — candidates only */}
-          <div className="landing-cycle-toggle-wrap">
-            <button
-              className={`landing-cycle-toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
-              onClick={() => setBillingCycle('monthly')}
-            >
-              Monthly
-            </button>
-            <button
-              className={`landing-cycle-toggle-btn ${billingCycle === 'yearly' ? 'active' : ''}`}
-              onClick={() => setBillingCycle('yearly')}
-            >
-              Yearly <span className="landing-save-badge">Save 20%</span>
-            </button>
-          </div>
-
-          {/* Pricing Cards Grid */}
-          <div className="landing-pricing-grid">
-                {/* Candidate Free Plan */}
-                <div className="landing-pricing-card glass-card">
-                  <div className="card-header">
-                    <h3 className="plan-name">Free Plan</h3>
-                    <p className="plan-tagline">Standard search and applications.</p>
-                    <div className="plan-price">
-                      <span className="currency">₹</span>
-                      <span className="amount">0</span>
-                      <span className="period">/mo</span>
-                    </div>
-                  </div>
-                  <div className="plan-features">
-                    <ul>
-                      <li>
-                        <span className="material-symbols-outlined check-icon">done</span>
-                        Standard job search and applications
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon">done</span>
-                        Complete professional profile strength
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon">done</span>
-                        Standard email notifications
-                      </li>
-                      <li className="disabled">
-                        <span className="material-symbols-outlined close-icon">close</span>
-                        Premium profile search ranking boost
-                      </li>
-                      <li className="disabled">
-                        <span className="material-symbols-outlined close-icon">close</span>
-                        Advanced stats and insights
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="card-action">
-                    <Link to="/register?role=employee" className="btn btn-ghost w-100">
-                      Get Started Free
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Candidate Premium Plan */}
-                <div className="landing-pricing-card glass-card premium-card candidate-premium-card">
-                  <div className="premium-glow" />
-                  <div className="popular-badge">High Recommendation</div>
-                  <div className="card-header">
-                    <h3 className="plan-name">Candidate Premium</h3>
-                    <p className="plan-tagline">Double your matches and stand out instantly.</p>
-                    <div className="plan-price">
-                      <span className="currency">₹</span>
-                      <span className="amount">{billingCycle === 'yearly' ? '999' : '1,499'}</span>
-                      <span className="period">/mo</span>
-                    </div>
-                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹11,988/yr)</p>}
-                  </div>
-                  <div className="plan-features">
-                    <ul>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        <strong>2x higher ranking in recruiter search results</strong>
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        <strong>Advanced salary comparison stats per match</strong>
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        Pulsing Gold Premium ring on avatar
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        Priority support responses
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        Sarah Jenkins prioritized advice sessions
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="card-action">
-                    <Link to="/register?role=employee&plan=premium" className="btn btn-primary w-100 btn-gold-gradient">
-                      Upgrade to Premium
-                    </Link>
-                  </div>
-                </div>
-          </div>
-            </>
+            <EmployeePricingPlans />
           )}
         </div>
       </section>
