@@ -7,6 +7,9 @@ export interface BillingStatusApi {
   expiresAt: string | null;
   cycle: 'monthly' | 'yearly' | null;
   credits: number;
+  jobCredits?: number;
+  jobCreditsExpiresAt?: string | null;
+  activeJobPackId?: '1M' | '3M' | '6M' | null;
   userRole: 'EMPLOYEE' | 'EMPLOYER' | 'ADMIN';
 }
 
@@ -21,10 +24,11 @@ export interface BillingTransactionApi {
 }
 
 export interface CheckoutPayload {
-  type: 'SUBSCRIPTION' | 'CREDITS' | 'FEATURED_JOB';
+  type: 'SUBSCRIPTION' | 'CREDITS' | 'FEATURED_JOB' | 'JOB_PACK';
   plan?: 'PRO' | 'PREMIUM';
   cycle?: 'monthly' | 'yearly';
   creditsAmount?: number;
+  employerPlanId?: '1M' | '3M' | '6M';
   jobId?: string;
 }
 

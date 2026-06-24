@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../contexts/AuthContext';
+import EmployerPricingPlans from '../../components/pricing/EmployerPricingPlans';
+import type { EmployerJobPackId } from '../../lib/employerPlans';
 import * as billingApi from '../../lib/billingApi';
 import './Pricing.css';
 
@@ -34,10 +36,11 @@ export default function Pricing() {
         const cycle = parsedUrl.searchParams.get('cycle') as any;
         const credits = parsedUrl.searchParams.get('credits') ? parseInt(parsedUrl.searchParams.get('credits')!, 10) : undefined;
         const jobId = parsedUrl.searchParams.get('jobId') || undefined;
+        const employerPlanId = (parsedUrl.searchParams.get('pack') || undefined) as EmployerJobPackId | undefined;
 
         setSandboxModal({
           open: true,
-          payload: { type, plan, cycle, creditsAmount: credits, jobId },
+          payload: { type, plan, cycle, creditsAmount: credits, jobId, employerPlanId },
         });
       } else {
         // Redirect to Stripe checkout page
@@ -81,6 +84,13 @@ export default function Pricing() {
     });
   };
 
+  const handleBuyJobPack = (employerPlanId: EmployerJobPackId) => {
+    checkoutMutation.mutate({
+      type: 'JOB_PACK',
+      employerPlanId,
+    });
+  };
+
   const handleBuyCredits = (amount: number) => {
     checkoutMutation.mutate({
       type: 'CREDITS',
@@ -95,15 +105,17 @@ export default function Pricing() {
   };
 
   return (
-    <div className="pricing-container animate-fade-in">
+    <div className={`pricing-container animate-fade-in ${isEmployer ? 'pricing-container-employer' : ''}`}>
       <div className="pricing-header">
         <span className="pricing-kicker">Transparent Monetization</span>
         <h1 className="pricing-title">Find Your Perfect Plan</h1>
         <p className="pricing-subtitle">
-          Unlock high-performance tools, priority candidate pipelines, and automated AI assistance.
+          {isEmployer
+            ? 'Choose a job credit pack—each credit publishes one role and keeps it active for 15 days.'
+            : 'Unlock high-performance tools, priority candidate pipelines, and automated AI assistance.'}
         </p>
 
-        {/* Billing Cycle Toggle */}
+        {!isEmployer && (
         <div className="cycle-toggle-wrap">
           <button
             className={`cycle-toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
@@ -118,8 +130,25 @@ export default function Pricing() {
             Yearly <span className="save-badge">Save 20%</span>
           </button>
         </div>
+        )}
       </div>
 
+      {isEmployer ? (
+        <>
+          {status?.jobCredits != null && status.jobCredits > 0 ? (
+            <p className="pricing-job-credits-banner">
+              You have <strong>{status.jobCredits}</strong> job credit{status.jobCredits === 1 ? '' : 's'}
+              {status.jobCreditsExpiresAt
+                ? ` · use by ${new Date(status.jobCreditsExpiresAt).toLocaleDateString('en-IN')}`
+                : ''}
+            </p>
+          ) : null}
+          <EmployerPricingPlans
+            onBuyPack={handleBuyJobPack}
+            buyBusy={checkoutMutation.isPending}
+          />
+        </>
+      ) : (
       <div className="pricing-grid">
         {/* Tier 1: Free Tier */}
         <div className="pricing-card glass-card">
@@ -136,11 +165,11 @@ export default function Pricing() {
             <ul>
               <li>
                 <span className="material-symbols-outlined check-icon">done</span>
-                {isEmployer ? 'Post up to 3 job listings' : 'Standard job search and applications'}
+                Standard job search and applications
               </li>
               <li>
                 <span className="material-symbols-outlined check-icon">done</span>
-                {isEmployer ? 'Basic matching scores' : 'Complete professional profile strength'}
+                Complete professional profile strength
               </li>
               <li>
                 <span className="material-symbols-outlined check-icon">done</span>
@@ -148,7 +177,7 @@ export default function Pricing() {
               </li>
               <li className="disabled">
                 <span className="material-symbols-outlined close-icon">close</span>
-                {isEmployer ? 'Direct candidate unlock details' : 'Premium profile search ranking boost'}
+                Premium profile search ranking boost
               </li>
               <li className="disabled">
                 <span className="material-symbols-outlined close-icon">close</span>
@@ -163,58 +192,7 @@ export default function Pricing() {
           </div>
         </div>
 
-        {/* Tier 2: Premium Subscription */}
-        {isEmployer ? (
-          /* Recruiter Pro */
-          <div className="pricing-card glass-card premium-card">
-            <div className="premium-glow" />
-            <div className="popular-badge">Most Popular</div>
-            <div className="card-header">
-              <h3 className="plan-name">Employer Pro</h3>
-              <p className="plan-tagline">Complete hiring workspace with unlimited posts.</p>
-              <div className="plan-price">
-                <span className="currency">₹</span>
-                <span className="amount">{billingCycle === 'yearly' ? '5,999' : '7,999'}</span>
-                <span className="period">/mo</span>
-              </div>
-              {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹71,988/yr)</p>}
-            </div>
-            <div className="plan-features">
-              <ul>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  <strong>Unlimited active job postings</strong>
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  <strong>Direct access to unlocked resumes & details</strong>
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  Full Dynamic matches pipelines access
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  AI prioritized candidate matching briefs
-                </li>
-                <li>
-                  <span className="material-symbols-outlined check-icon text-gold">star</span>
-                  Gold PRO company profile badge
-                </li>
-              </ul>
-            </div>
-            <div className="card-action">
-              <button
-                className="btn btn-primary w-100 btn-gold-gradient"
-                disabled={activePlan === 'PRO'}
-                onClick={() => handleSelectPlan('PRO')}
-              >
-                {activePlan === 'PRO' ? 'Active Subscription' : 'Upgrade to Pro'}
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Seeker Premium */
+        {/* Candidate Premium */}
           <div className="pricing-card glass-card premium-card">
             <div className="premium-glow" />
             <div className="popular-badge">High Recommendation</div>
@@ -262,10 +240,10 @@ export default function Pricing() {
               </button>
             </div>
           </div>
-        )}
       </div>
+      )}
 
-      {/* Recruiter Credit Purchase Card */}
+      {/* Recruiter candidate unlock credits */}
       {isEmployer && (
         <div className="credits-monetization-card glass-card">
           <div className="credits-info">
@@ -304,6 +282,12 @@ export default function Pricing() {
                 <div className="summary-row">
                   <span>Plan:</span>
                   <strong>{sandboxModal.payload.plan} ({sandboxModal.payload.cycle})</strong>
+                </div>
+              )}
+              {sandboxModal.payload?.employerPlanId && (
+                <div className="summary-row">
+                  <span>Job pack:</span>
+                  <strong>{sandboxModal.payload.employerPlanId}</strong>
                 </div>
               )}
               {sandboxModal.payload?.creditsAmount && (

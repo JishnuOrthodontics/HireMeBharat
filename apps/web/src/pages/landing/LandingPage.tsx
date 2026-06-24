@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import EmployerPricingPlans from '../../components/pricing/EmployerPricingPlans';
 import './LandingPage.css';
 
 /* ============================================================
@@ -304,7 +305,11 @@ export default function LandingPage() {
               Transparent Pricing
             </span>
             <h2 className="text-h1">Find your perfect <span className="text-gradient-emerald">plan</span></h2>
-            <p className="text-body-lg section-subtitle">Unlock advanced matching tools, high-priority pipelines, and concierge guidance.</p>
+            <p className="text-body-lg section-subtitle">
+              {pricingRole === 'employer'
+                ? 'Job credit packs for every hiring timeline—post roles, stay visible, and scale when you grow.'
+                : 'Unlock advanced matching tools, high-priority pipelines, and concierge guidance.'}
+            </p>
           </div>
 
           {/* Interactive Role Tabs */}
@@ -325,7 +330,11 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Billing Cycle Toggle */}
+          {pricingRole === 'employer' ? (
+            <EmployerPricingPlans />
+          ) : (
+            <>
+          {/* Billing Cycle Toggle — candidates only */}
           <div className="landing-cycle-toggle-wrap">
             <button
               className={`landing-cycle-toggle-btn ${billingCycle === 'monthly' ? 'active' : ''}`}
@@ -343,97 +352,6 @@ export default function LandingPage() {
 
           {/* Pricing Cards Grid */}
           <div className="landing-pricing-grid">
-            {pricingRole === 'employer' ? (
-              <>
-                {/* Employer Free Plan */}
-                <div className="landing-pricing-card glass-card">
-                  <div className="card-header">
-                    <h3 className="plan-name">Free Plan</h3>
-                    <p className="plan-tagline">Essential platform entry to search and browse.</p>
-                    <div className="plan-price">
-                      <span className="currency">₹</span>
-                      <span className="amount">0</span>
-                      <span className="period">/mo</span>
-                    </div>
-                  </div>
-                  <div className="plan-features">
-                    <ul>
-                      <li>
-                        <span className="material-symbols-outlined check-icon">done</span>
-                        Post up to 3 job listings
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon">done</span>
-                        Basic matching scores
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon">done</span>
-                        Standard email notifications
-                      </li>
-                      <li className="disabled">
-                        <span className="material-symbols-outlined close-icon">close</span>
-                        Direct candidate unlock details
-                      </li>
-                      <li className="disabled">
-                        <span className="material-symbols-outlined close-icon">close</span>
-                        Advanced stats and insights
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="card-action">
-                    <Link to="/register?role=employer" className="btn btn-ghost w-100">
-                      Get Started Free
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Employer Pro Plan */}
-                <div className="landing-pricing-card glass-card premium-card employer-pro-card">
-                  <div className="premium-glow" />
-                  <div className="popular-badge">Most Popular</div>
-                  <div className="card-header">
-                    <h3 className="plan-name">Employer Pro</h3>
-                    <p className="plan-tagline">Complete hiring workspace with unlimited posts.</p>
-                    <div className="plan-price">
-                      <span className="currency">₹</span>
-                      <span className="amount">{billingCycle === 'yearly' ? '5,999' : '7,999'}</span>
-                      <span className="period">/mo</span>
-                    </div>
-                    {billingCycle === 'yearly' && <p className="billing-frequency">Billed annually (₹71,988/yr)</p>}
-                  </div>
-                  <div className="plan-features">
-                    <ul>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        <strong>Unlimited active job postings</strong>
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        <strong>Direct access to unlocked resumes & details</strong>
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        Full Dynamic matches pipelines access
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        AI prioritized candidate matching briefs
-                      </li>
-                      <li>
-                        <span className="material-symbols-outlined check-icon text-gold">star</span>
-                        Gold PRO company profile badge
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="card-action">
-                    <Link to="/register?role=employer&plan=pro" className="btn btn-primary w-100 btn-gold-gradient">
-                      Upgrade to Pro
-                    </Link>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <>
                 {/* Candidate Free Plan */}
                 <div className="landing-pricing-card glass-card">
                   <div className="card-header">
@@ -520,9 +438,9 @@ export default function LandingPage() {
                     </Link>
                   </div>
                 </div>
-              </>
-            )}
           </div>
+            </>
+          )}
         </div>
       </section>
 

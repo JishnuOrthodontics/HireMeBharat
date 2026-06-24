@@ -4,6 +4,25 @@
   padding: 40px 20px;
 }
 
+.pricing-container-employer {
+  max-width: 1140px;
+}
+
+.pricing-job-credits-banner {
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-on-surface-variant);
+  margin: -24px 0 28px;
+  padding: 12px 16px;
+  border-radius: var(--radius-default);
+  background: rgba(80, 250, 123, 0.08);
+  border: 1px solid rgba(80, 250, 123, 0.2);
+}
+
+.pricing-job-credits-banner strong {
+  color: var(--color-primary-container);
+}
+
 .pricing-header {
   text-align: center;
   margin-bottom: 50px;

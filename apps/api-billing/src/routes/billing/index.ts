@@ -4,12 +4,25 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 
 const checkoutSchema = z.object({
-  type: z.enum(['SUBSCRIPTION', 'CREDITS', 'FEATURED_JOB']),
+  type: z.enum(['SUBSCRIPTION', 'CREDITS', 'FEATURED_JOB', 'JOB_PACK']),
   plan: z.enum(['PRO', 'PREMIUM']).optional(),
   cycle: z.enum(['monthly', 'yearly']).optional(),
   creditsAmount: z.number().int().min(1).max(100).optional(),
+  employerPlanId: z.enum(['1M', '3M', '6M']).optional(),
   jobId: z.string().optional(),
 });
+
+const EMPLOYER_JOB_PACKS: Record<'1M' | '3M' | '6M', {
+  jobCredits: number;
+  creditValidityDays: number;
+  jobActiveDays: number;
+  priceInr: number;
+  label: string;
+}> = {
+  '1M': { jobCredits: 3, creditValidityDays: 30, jobActiveDays: 15, priceInr: 1949, label: '1 Month' },
+  '3M': { jobCredits: 6, creditValidityDays: 90, jobActiveDays: 15, priceInr: 3649, label: '3 Months' },
+  '6M': { jobCredits: 13, creditValidityDays: 180, jobActiveDays: 15, priceInr: 7099, label: '6 Months' },
+};
 
 function toIso(value: unknown): string | null {
   if (!value) return null;
@@ -31,6 +44,7 @@ export async function billingRoutes(app: FastifyInstance) {
       db.collection('billing_subscriptions').createIndex({ userUid: 1 }, { unique: true }),
       db.collection('billing_transactions').createIndex({ userUid: 1, createdAt: -1 }),
       db.collection('employer_credits').createIndex({ employerUid: 1 }, { unique: true }),
+      db.collection('employer_job_packs').createIndex({ employerUid: 1 }, { unique: true }),
     ]);
   });
 
@@ -48,19 +62,26 @@ export async function billingRoutes(app: FastifyInstance) {
     const db = app.mongo?.db;
     if (!db) return reply.code(500).send({ error: 'Database unavailable' });
 
-    const [sub, creditsDoc, userDoc] = await Promise.all([
+    const [sub, creditsDoc, jobPackDoc, userDoc] = await Promise.all([
       db.collection('billing_subscriptions').findOne({ userUid: uid }),
       db.collection('employer_credits').findOne({ employerUid: uid }),
+      db.collection('employer_job_packs').findOne({ employerUid: uid }),
       db.collection('users').findOne({ uid }),
     ]);
 
     const activePlan = sub && new Date(sub.expiresAt) > new Date() ? sub.plan : 'FREE';
+    const packExpiresAt = jobPackDoc?.packExpiresAt ? new Date(jobPackDoc.packExpiresAt) : null;
+    const jobCredits =
+      packExpiresAt && packExpiresAt > new Date() ? Number(jobPackDoc?.creditsRemaining || 0) : 0;
 
     return reply.send({
       plan: activePlan,
       expiresAt: sub ? toIso(sub.expiresAt) : null,
       cycle: sub?.cycle || null,
       credits: creditsDoc?.credits || 0,
+      jobCredits,
+      jobCreditsExpiresAt: packExpiresAt && packExpiresAt > new Date() ? toIso(packExpiresAt) : null,
+      activeJobPackId: jobPackDoc?.lastPackId || null,
       userRole: userDoc?.role || 'EMPLOYEE',
     });
   });
@@ -100,7 +121,7 @@ export async function billingRoutes(app: FastifyInstance) {
 
     const parsed = checkoutSchema.safeParse(request.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid payload' });
-    const { type, plan, cycle, creditsAmount, jobId } = parsed.data;
+    const { type, plan, cycle, creditsAmount, jobId, employerPlanId } = parsed.data;
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -108,7 +129,7 @@ export async function billingRoutes(app: FastifyInstance) {
     if (isSandbox) {
       return reply.send({
         mode: 'sandbox',
-        checkoutUrl: `${frontendUrl}/${request.user!.role.toLowerCase()}/billing?sandbox=true&type=${type}&plan=${plan || ''}&cycle=${cycle || ''}&credits=${creditsAmount || ''}&jobId=${jobId || ''}`,
+        checkoutUrl: `${frontendUrl}/${request.user!.role.toLowerCase()}/billing?sandbox=true&type=${type}&plan=${plan || ''}&cycle=${cycle || ''}&credits=${creditsAmount || ''}&jobId=${jobId || ''}&pack=${employerPlanId || ''}`,
       });
     }
 
@@ -141,15 +162,38 @@ export async function billingRoutes(app: FastifyInstance) {
           mode: 'payment',
           line_items: [{
             price_data: {
-              currency: 'usd',
+              currency: 'inr',
               product_data: { name: 'Recruiter Candidate Unlock Credits', description: `Pack of ${credits} candidate unlock credits` },
-              unit_amount: 500, // $5 each
+              unit_amount: 50000,
             },
             quantity: credits,
           }],
           success_url: successUrl,
           cancel_url: cancelUrl,
           metadata: { userUid: uid, creditsAmount: String(credits), type },
+        });
+      } else if (type === 'JOB_PACK') {
+        if (!employerPlanId || !EMPLOYER_JOB_PACKS[employerPlanId]) {
+          return reply.code(400).send({ error: 'Bad Request', message: 'Valid employerPlanId is required for JOB_PACK' });
+        }
+        const pack = EMPLOYER_JOB_PACKS[employerPlanId];
+        session = await stripe!.checkout.sessions.create({
+          payment_method_types: ['card'],
+          mode: 'payment',
+          line_items: [{
+            price_data: {
+              currency: 'inr',
+              product_data: {
+                name: `Employer Job Pack — ${pack.label}`,
+                description: `${pack.jobCredits} job credits · ${pack.creditValidityDays} days validity · ${pack.jobActiveDays} days active per job`,
+              },
+              unit_amount: pack.priceInr * 100,
+            },
+            quantity: 1,
+          }],
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          metadata: { userUid: uid, employerPlanId, type },
         });
       } else {
         // FEATURED_JOB
@@ -186,9 +230,54 @@ export async function billingRoutes(app: FastifyInstance) {
 
     const parsed = checkoutSchema.safeParse(request.body ?? {});
     if (!parsed.success) return reply.code(400).send({ error: 'Bad Request', message: 'Invalid payload' });
-    const { type, plan, cycle, creditsAmount, jobId } = parsed.data;
+    const { type, plan, cycle, creditsAmount, jobId, employerPlanId } = parsed.data;
 
     const now = new Date();
+
+    async function applyEmployerJobPack(packId: '1M' | '3M' | '6M') {
+      const pack = EMPLOYER_JOB_PACKS[packId];
+      const packExpiresAt = new Date(now.getTime() + pack.creditValidityDays * 24 * 60 * 60 * 1000);
+      const existing = await db.collection('employer_job_packs').findOne({ employerUid: uid });
+      const existingExpiry = existing?.packExpiresAt ? new Date(existing.packExpiresAt) : null;
+      const existingCredits =
+        existingExpiry && existingExpiry > now ? Number(existing?.creditsRemaining || 0) : 0;
+      const mergedExpiry =
+        existingExpiry && existingExpiry > now && existingExpiry > packExpiresAt ? existingExpiry : packExpiresAt;
+
+      await db.collection('employer_job_packs').updateOne(
+        { employerUid: uid },
+        {
+          $set: {
+            creditsRemaining: existingCredits + pack.jobCredits,
+            jobActiveDays: pack.jobActiveDays,
+            packExpiresAt: mergedExpiry,
+            lastPackId: packId,
+            updatedAt: now,
+          },
+          $setOnInsert: { employerUid: uid, createdAt: now },
+        },
+        { upsert: true }
+      );
+
+      await db.collection('billing_transactions').insertOne({
+        userUid: uid,
+        type: 'JOB_PACK',
+        amount: pack.priceInr,
+        currency: 'INR',
+        description: `Simulated Purchase: ${pack.label} (${pack.jobCredits} job credits)`,
+        status: 'SUCCESS',
+        createdAt: now,
+      });
+
+      await db.collection('notifications').insertOne({
+        userUid: uid,
+        type: 'BILLING',
+        title: 'Job credits added',
+        content: `${pack.jobCredits} job credits were added to your account. Use them within ${pack.creditValidityDays} days.`,
+        read: false,
+        createdAt: now,
+      });
+    }
 
     if (type === 'SUBSCRIPTION') {
       const expiresAt = new Date();
@@ -263,6 +352,11 @@ export async function billingRoutes(app: FastifyInstance) {
         read: false,
         createdAt: now,
       });
+    } else if (type === 'JOB_PACK') {
+      if (!employerPlanId) {
+        return reply.code(400).send({ error: 'Bad Request', message: 'employerPlanId is required for JOB_PACK' });
+      }
+      await applyEmployerJobPack(employerPlanId);
     } else if (type === 'FEATURED_JOB') {
       if (!jobId || !ObjectId.isValid(jobId)) {
         return reply.code(400).send({ error: 'Bad Request', message: 'Valid jobId is required for boosting' });
@@ -377,6 +471,43 @@ export async function billingRoutes(app: FastifyInstance) {
           status: 'SUCCESS',
           createdAt: now,
         });
+      } else if (uid && type === 'JOB_PACK') {
+        const packId = metadata.employerPlanId as '1M' | '3M' | '6M';
+        if (packId && EMPLOYER_JOB_PACKS[packId]) {
+          const pack = EMPLOYER_JOB_PACKS[packId];
+          const packExpiresAt = new Date(now.getTime() + pack.creditValidityDays * 24 * 60 * 60 * 1000);
+          const existing = await db.collection('employer_job_packs').findOne({ employerUid: uid });
+          const existingExpiry = existing?.packExpiresAt ? new Date(existing.packExpiresAt) : null;
+          const existingCredits =
+            existingExpiry && existingExpiry > now ? Number(existing?.creditsRemaining || 0) : 0;
+          const mergedExpiry =
+            existingExpiry && existingExpiry > now && existingExpiry > packExpiresAt ? existingExpiry : packExpiresAt;
+
+          await db.collection('employer_job_packs').updateOne(
+            { employerUid: uid },
+            {
+              $set: {
+                creditsRemaining: existingCredits + pack.jobCredits,
+                jobActiveDays: pack.jobActiveDays,
+                packExpiresAt: mergedExpiry,
+                lastPackId: packId,
+                updatedAt: now,
+              },
+              $setOnInsert: { employerUid: uid, createdAt: now },
+            },
+            { upsert: true }
+          );
+
+          await db.collection('billing_transactions').insertOne({
+            userUid: uid,
+            type: 'JOB_PACK',
+            amount: session.amount_total / 100,
+            currency: session.currency?.toUpperCase() || 'INR',
+            description: `Stripe Checkout: ${pack.label} job pack`,
+            status: 'SUCCESS',
+            createdAt: now,
+          });
+        }
       } else if (uid && type === 'FEATURED_JOB') {
         const jobId = metadata.jobId;
         if (jobId && ObjectId.isValid(jobId)) {

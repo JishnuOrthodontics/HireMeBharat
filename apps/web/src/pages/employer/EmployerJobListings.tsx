@@ -60,7 +60,8 @@ export default function EmployerJobListings() {
   }, []);
 
   const activeListingsCount = listings.filter(l => l.status === 'ACTIVE').length;
-  const isCapped = activeListingsCount >= 3 && billingStatus?.plan !== 'PRO';
+  const jobCredits = Number(billingStatus?.jobCredits || 0);
+  const isCapped = activeListingsCount >= 3 && billingStatus?.plan !== 'PRO' && jobCredits <= 0;
 
   const handleOpenCreateModal = () => {
     setEditingListing(null);
@@ -223,11 +224,11 @@ export default function EmployerJobListings() {
               Free Job Postings Capped
             </p>
             <p style={{ fontSize: 13, color: 'var(--color-on-surface-variant)', margin: '4px 0 0 0' }}>
-              You are currently using <strong>{activeListingsCount} of 3</strong> active job listings. Upgrade to Employer Pro for unlimited listings and direct candidate unlocks!
+              You are using <strong>{activeListingsCount} of 3</strong> free active listings. Buy a job credit pack to publish more roles (each credit = one job active for 15 days).
             </p>
           </div>
           <Link to="/employer/pricing" className="btn btn-gold" style={{ fontSize: 12, padding: '8px 16px' }}>
-            Upgrade to Pro
+            View job packs
           </Link>
         </div>
       )}
