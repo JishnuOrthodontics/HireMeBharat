@@ -1,0 +1,61 @@
+name: Cleanup Backend VM Disk
+
+on:
+  schedule:
+    # Nightly at 03:15 UTC — keeps the GCP VM disk from filling between deploys.
+    - cron: '15 3 * * *'
+  workflow_dispatch:
+    inputs:
+      cleanup_mode:
+        description: 'light (cache only), standard (default), or aggressive'
+        required: false
+        default: standard
+        type: choice
+        options:
+          - light
+          - standard
+          - aggressive
+      keep_registry_tags:
+        description: 'Registry tags to keep per service (besides latest/cache/compose)'
+        required: false
+        default: '6'
+        type: string
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH deploy key
+        env:
+          SSH_KEY: ${{ secrets.GCP_VM_SSH_KEY }}
+          SSH_PASS: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
+        run: bash scripts/ci/prepare-ssh-deploy-key.sh
+
+      - name: Stage cleanup script for SCP
+        run: cp scripts/ci/cleanup-vm-docker.sh cleanup-vm-docker.sh
+
+      - name: Copy cleanup script to GCP VM
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key_path: .ci_deploy_key
+          source: cleanup-vm-docker.sh
+          target: /opt/hiremebharat/
+
+      - name: Run VM disk cleanup
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key_path: .ci_deploy_key
+          envs: CLEANUP_MODE,KEEP_REGISTRY_TAGS
+          script: |
+            chmod +x /opt/hiremebharat/cleanup-vm-docker.sh
+            /opt/hiremebharat/cleanup-vm-docker.sh
+        env:
+          CLEANUP_MODE: ${{ github.event.inputs.cleanup_mode || 'standard' }}
+          KEEP_REGISTRY_TAGS: ${{ github.event.inputs.keep_registry_tags || '6' }}
