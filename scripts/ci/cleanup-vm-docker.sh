@@ -159,17 +159,23 @@ prune_registry_repo() {
 }
 
 wipe_registry_storage() {
-  echo "CRITICAL: wiping private registry storage at ${REGISTRY_DIR}..."
+  echo "CRITICAL: stopping stack and wiping Docker + registry storage..."
   if [ -f "${COMPOSE_FILE}" ]; then
-    (cd "${COMPOSE_DIR}" && docker compose -f docker-compose.prod.yml stop registry) 2>/dev/null || true
+    (cd "${COMPOSE_DIR}" && docker compose -f docker-compose.prod.yml down --remove-orphans) 2>/dev/null || true
+  else
+    docker stop $(docker ps -q) 2>/dev/null || true
   fi
+
   if [ -d "${REGISTRY_DIR}" ]; then
+    du -sh "${REGISTRY_DIR}" 2>/dev/null || true
     find "${REGISTRY_DIR}" -mindepth 1 -delete 2>/dev/null \
       || rm -rf "${REGISTRY_DIR:?}"/* 2>/dev/null \
       || true
     mkdir -p "${REGISTRY_DIR}"
   fi
-  docker volume prune -f 2>/dev/null || true
+
+  docker system prune -af --volumes 2>/dev/null || true
+
   if [ -f "${COMPOSE_FILE}" ]; then
     (cd "${COMPOSE_DIR}" && docker compose -f docker-compose.prod.yml up -d registry) 2>/dev/null || true
   fi
