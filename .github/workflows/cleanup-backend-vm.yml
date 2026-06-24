@@ -34,14 +34,15 @@ jobs:
           SSH_PASS: ${{ secrets.GCP_VM_SSH_KEY_PASSPHRASE }}
         run: bash scripts/ci/prepare-ssh-deploy-key.sh
 
-      - name: Encode cleanup script
+      - name: Encode cleanup payloads
         id: cleanup_bundle
         run: bash scripts/ci/encode-cleanup-script.sh
 
       - name: Run VM disk cleanup over SSH
         uses: appleboy/ssh-action@v0.1.10
         env:
-          SCRIPT_B64: ${{ steps.cleanup_bundle.outputs.payload }}
+          BOOTSTRAP_B64: ${{ steps.cleanup_bundle.outputs.bootstrap_b64 }}
+          SCRIPT_B64: ${{ steps.cleanup_bundle.outputs.cleanup_b64 }}
           CLEANUP_MODE: ${{ github.event.inputs.cleanup_mode || 'standard' }}
           KEEP_REGISTRY_TAGS: ${{ github.event.inputs.keep_registry_tags || '6' }}
         with:
@@ -49,15 +50,10 @@ jobs:
           username: ${{ secrets.GCP_VM_USERNAME }}
           key_path: .ci_deploy_key
           command_timeout: 15m
-          envs: SCRIPT_B64,CLEANUP_MODE,KEEP_REGISTRY_TAGS
+          envs: BOOTSTRAP_B64,SCRIPT_B64,CLEANUP_MODE,KEEP_REGISTRY_TAGS
           script: |
-            set -euo pipefail
-            mkdir -p /opt/hiremebharat
-            echo "=== Bootstrap: emergency Docker prune (no SCP — works when disk is full) ==="
-            df -h / || true
-            docker builder prune -af || true
-            docker container prune -f || true
-            docker image prune -af || true
-            printf '%s' "$SCRIPT_B64" | base64 -d > /opt/hiremebharat/cleanup-vm-docker.sh
-            chmod +x /opt/hiremebharat/cleanup-vm-docker.sh
-            /opt/hiremebharat/cleanup-vm-docker.sh
+            set -u
+            echo "=== Phase 1: emergency bootstrap (no file writes) ==="
+            printf '%s' "$BOOTSTRAP_B64" | base64 -d | bash -s
+            echo "=== Phase 2: full cleanup (streamed to bash, no SCP) ==="
+            printf '%s' "$SCRIPT_B64" | base64 -d | bash -s
